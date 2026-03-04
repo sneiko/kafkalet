@@ -55,6 +55,10 @@ jobs:
         if: runner.os == 'Windows'
         run: choco install nsis --no-progress -y
 
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
+
       # ── Build ───────────────────────────────────────────────────────────────
 
       - name: Build (macOS)

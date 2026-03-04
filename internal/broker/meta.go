@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/twmb/franz-go/pkg/kadm"
+	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/kmsg"
 	"kafkalet/internal/profile"
 )
@@ -48,7 +49,11 @@ type Topic struct {
 }
 
 // TestConnection verifies broker reachability via an ApiVersions request.
+// Uses its own short-lived client with a dedicated timeout.
 func TestConnection(ctx context.Context, b profile.Broker, password string) error {
+	ctx, cancel := context.WithTimeout(ctx, TimeoutConnection)
+	defer cancel()
+
 	client, err := NewClient(b, password)
 	if err != nil {
 		return fmt.Errorf("create client: %w", err)
@@ -64,13 +69,7 @@ func TestConnection(ctx context.Context, b profile.Broker, password string) erro
 }
 
 // ListTopics fetches all topics with their partition counts.
-func ListTopics(ctx context.Context, b profile.Broker, password string) ([]Topic, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return nil, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func ListTopics(ctx context.Context, client *kgo.Client) ([]Topic, error) {
 	adm := kadm.NewClient(client)
 	details, err := adm.ListTopics(ctx)
 	if err != nil {
@@ -95,13 +94,7 @@ func ListTopics(ctx context.Context, b profile.Broker, password string) ([]Topic
 }
 
 // GetTopicMetadata returns partition details (leader, replicas, ISR) for a topic.
-func GetTopicMetadata(ctx context.Context, b profile.Broker, password string, topic string) (TopicMetadata, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return TopicMetadata{}, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func GetTopicMetadata(ctx context.Context, client *kgo.Client, topic string) (TopicMetadata, error) {
 	adm := kadm.NewClient(client)
 	details, err := adm.ListTopics(ctx, topic)
 	if err != nil {
@@ -135,15 +128,8 @@ func GetTopicMetadata(ctx context.Context, b profile.Broker, password string, to
 }
 
 // ListConsumerGroupsForTopic returns lag metrics for all groups that have
-// committed offsets for the given topic. Each group requires one FetchOffsets
-// round-trip — acceptable for a UI tool at MVP scale.
-func ListConsumerGroupsForTopic(ctx context.Context, b profile.Broker, password string, topic string) ([]GroupLag, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return nil, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+// committed offsets for the given topic.
+func ListConsumerGroupsForTopic(ctx context.Context, client *kgo.Client, topic string) ([]GroupLag, error) {
 	adm := kadm.NewClient(client)
 
 	listedGroups, err := adm.ListGroups(ctx)
@@ -206,16 +192,13 @@ func ListConsumerGroupsForTopic(ctx context.Context, b profile.Broker, password 
 //   - "earliest" — reset to the oldest available offset (log start)
 //   - "latest"   — reset to the newest offset (log end, consume only future messages)
 //   - numeric string (milliseconds since epoch) — seek to first offset at or after that time
-func ResetConsumerGroup(ctx context.Context, b profile.Broker, password, topic, groupID, offset string) error {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func ResetConsumerGroup(ctx context.Context, client *kgo.Client, topic, groupID, offset string) error {
 	adm := kadm.NewClient(client)
 
-	var listed kadm.ListedOffsets
+	var (
+		listed kadm.ListedOffsets
+		err    error
+	)
 	switch offset {
 	case "earliest":
 		listed, err = adm.ListStartOffsets(ctx, topic)
@@ -267,13 +250,7 @@ type ClusterInfo struct {
 }
 
 // GetClusterInfo fetches the cluster ID, controller, and broker list.
-func GetClusterInfo(ctx context.Context, b profile.Broker, password string) (ClusterInfo, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return ClusterInfo{}, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func GetClusterInfo(ctx context.Context, client *kgo.Client) (ClusterInfo, error) {
 	adm := kadm.NewClient(client)
 	meta, err := adm.BrokerMetadata(ctx)
 	if err != nil {
@@ -309,13 +286,7 @@ type ClusterStats struct {
 }
 
 // GetClusterStats returns broker/topic/partition counts plus URP and offline partition counts.
-func GetClusterStats(ctx context.Context, b profile.Broker, password string) (ClusterStats, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return ClusterStats{}, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func GetClusterStats(ctx context.Context, client *kgo.Client) (ClusterStats, error) {
 	adm := kadm.NewClient(client)
 
 	meta, err := adm.BrokerMetadata(ctx)
@@ -365,13 +336,7 @@ type GroupDetail struct {
 }
 
 // ListAllConsumerGroups returns all consumer groups with their state and total lag.
-func ListAllConsumerGroups(ctx context.Context, b profile.Broker, password string) ([]GroupSummary, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return nil, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func ListAllConsumerGroups(ctx context.Context, client *kgo.Client) ([]GroupSummary, error) {
 	adm := kadm.NewClient(client)
 
 	listedGroups, err := adm.ListGroups(ctx)
@@ -428,13 +393,7 @@ func ListAllConsumerGroups(ctx context.Context, b profile.Broker, password strin
 }
 
 // GetConsumerGroupDetail returns per-topic/per-partition lag for a single consumer group.
-func GetConsumerGroupDetail(ctx context.Context, b profile.Broker, password, groupID string) (GroupDetail, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return GroupDetail{}, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func GetConsumerGroupDetail(ctx context.Context, client *kgo.Client, groupID string) (GroupDetail, error) {
 	adm := kadm.NewClient(client)
 
 	described, err := adm.DescribeGroups(ctx, groupID)
@@ -508,13 +467,7 @@ type CreateTopicRequest struct {
 }
 
 // CreateTopic creates a new Kafka topic.
-func CreateTopic(ctx context.Context, b profile.Broker, password string, req CreateTopicRequest) error {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func CreateTopic(ctx context.Context, client *kgo.Client, req CreateTopicRequest) error {
 	adm := kadm.NewClient(client)
 	resp, err := adm.CreateTopics(ctx, req.Partitions, req.ReplicationFactor, nil, req.Name)
 	if err != nil {
@@ -524,13 +477,7 @@ func CreateTopic(ctx context.Context, b profile.Broker, password string, req Cre
 }
 
 // DeleteTopic deletes a Kafka topic by name.
-func DeleteTopic(ctx context.Context, b profile.Broker, password, name string) error {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func DeleteTopic(ctx context.Context, client *kgo.Client, name string) error {
 	adm := kadm.NewClient(client)
 	resp, err := adm.DeleteTopics(ctx, name)
 	if err != nil {
@@ -548,13 +495,7 @@ type TopicConfigEntry struct {
 }
 
 // GetTopicConfig returns the configuration entries for a topic.
-func GetTopicConfig(ctx context.Context, b profile.Broker, password, topic string) ([]TopicConfigEntry, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return nil, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func GetTopicConfig(ctx context.Context, client *kgo.Client, topic string) ([]TopicConfigEntry, error) {
 	adm := kadm.NewClient(client)
 	resp, err := adm.DescribeTopicConfigs(ctx, topic)
 	if err != nil {
@@ -587,13 +528,7 @@ func GetTopicConfig(ctx context.Context, b profile.Broker, password, topic strin
 }
 
 // AlterTopicConfig updates a single configuration key for a topic.
-func AlterTopicConfig(ctx context.Context, b profile.Broker, password, topic, key, value string) error {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func AlterTopicConfig(ctx context.Context, client *kgo.Client, topic, key, value string) error {
 	adm := kadm.NewClient(client)
 	resp, err := adm.AlterTopicConfigs(ctx, []kadm.AlterConfig{{Name: key, Value: &value}}, topic)
 	if err != nil {
@@ -605,13 +540,7 @@ func AlterTopicConfig(ctx context.Context, b profile.Broker, password, topic, ke
 
 // GetOffsetsAtTimestamp resolves, for each partition of a topic, the first
 // offset whose timestamp is at or after the given Unix millisecond value.
-func GetOffsetsAtTimestamp(ctx context.Context, b profile.Broker, password string, topic string, timestampMs int64) (map[int32]int64, error) {
-	client, err := NewClient(b, password)
-	if err != nil {
-		return nil, fmt.Errorf("create client: %w", err)
-	}
-	defer client.Close()
-
+func GetOffsetsAtTimestamp(ctx context.Context, client *kgo.Client, topic string, timestampMs int64) (map[int32]int64, error) {
 	adm := kadm.NewClient(client)
 	listed, err := adm.ListOffsetsAfterMilli(ctx, timestampMs, topic)
 	if err != nil {

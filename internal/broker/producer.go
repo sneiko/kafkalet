@@ -25,6 +25,9 @@ type ProduceRequest struct {
 
 // ProduceMessage produces a single message synchronously and waits for acks.
 func ProduceMessage(ctx context.Context, b profile.Broker, password string, req ProduceRequest) error {
+	ctx, cancel := context.WithTimeout(ctx, TimeoutProduce)
+	defer cancel()
+
 	var extra []kgo.Opt
 	if req.Partition >= 0 {
 		extra = append(extra, kgo.RecordPartitioner(kgo.ManualPartitioner()))

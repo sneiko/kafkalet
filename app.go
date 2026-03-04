@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"kafkalet/internal/apperr"
 	"kafkalet/internal/broker"
@@ -26,6 +27,7 @@ type App struct {
 	profileStore *profile.Store
 	pluginStore  *plugin.Store
 	streamMgr    *stream.Manager
+	pool         *broker.Pool
 
 	rateWatchCancel context.CancelFunc
 	rateWatchMu     sync.Mutex
@@ -51,7 +53,30 @@ func (a *App) startup(ctx context.Context) {
 		runtime.EventsEmit(ctx, name, data)
 	})
 
+	a.pool = broker.NewPool(broker.PoolTTL, func(b profile.Broker, pw string) (*kgo.Client, error) {
+		return broker.NewClient(b, pw)
+	})
+
 	a.migrateCredentials()
+}
+
+func (a *App) shutdown(_ context.Context) {
+	a.pool.Close()
+}
+
+// pooledClient resolves auth, gets or creates a pooled client, and returns a
+// context with TimeoutMetadata. Caller must defer cancel().
+func (a *App) pooledClient(profileID, brokerID string) (context.Context, context.CancelFunc, *kgo.Client, error) {
+	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	client, err := a.pool.Get(b, b.ActiveCredentialID, password)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	ctx, cancel := context.WithTimeout(a.ctx, broker.TimeoutMetadata)
+	return ctx, cancel, client, nil
 }
 
 // migrateCredentials converts legacy broker-level SASL to a named credential.
@@ -320,10 +345,11 @@ func (a *App) RenameProfile(id, name string) error {
 	return a.profileStore.Update(*p)
 }
 
-// SwitchProfile stops all active stream sessions, switches the active profile
-// and notifies the frontend.
+// SwitchProfile stops all active stream sessions, clears the connection pool,
+// switches the active profile and notifies the frontend.
 func (a *App) SwitchProfile(id string) error {
 	a.streamMgr.StopAll()
+	a.pool.CloseAll()
 
 	if err := a.profileStore.SetActive(id); err != nil {
 		return err
@@ -374,9 +400,11 @@ func (a *App) DeleteBrokerCredential(profileID, brokerID, credentialID string) e
 	return a.profileStore.DeleteBrokerCredential(profileID, brokerID, credentialID)
 }
 
-// SwitchBrokerCredential stops all sessions for a broker, sets the active credential, and emits an event.
+// SwitchBrokerCredential stops all sessions for a broker, evicts pooled clients,
+// sets the active credential, and emits an event.
 func (a *App) SwitchBrokerCredential(profileID, brokerID, credentialID string) error {
 	a.streamMgr.StopBroker(brokerID)
+	a.pool.EvictBroker(brokerID)
 	if err := a.profileStore.SetActiveBrokerCredential(profileID, brokerID, credentialID); err != nil {
 		return err
 	}
@@ -391,6 +419,7 @@ func (a *App) SwitchBrokerCredential(profileID, brokerID, credentialID string) e
 // ClearActiveBrokerCredential resets the broker to use its default SASL credentials.
 func (a *App) ClearActiveBrokerCredential(profileID, brokerID string) error {
 	a.streamMgr.StopBroker(brokerID)
+	a.pool.EvictBroker(brokerID)
 	return a.profileStore.ClearActiveBrokerCredential(profileID, brokerID)
 }
 
@@ -436,11 +465,12 @@ func (a *App) DeleteTopicGroup(profileID, brokerID, groupID string) error {
 
 // ListTopics fetches all topics with partition counts from the given broker.
 func (a *App) ListTopics(profileID, brokerID string) ([]broker.Topic, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return nil, err
 	}
-	return broker.ListTopics(a.ctx, b, password)
+	defer cancel()
+	return broker.ListTopics(ctx, client)
 }
 
 // ── Producer ──────────────────────────────────────────────────────────────────
@@ -456,51 +486,61 @@ func (a *App) ProduceMessage(profileID, brokerID string, req broker.ProduceReque
 
 // GetTopicMetadata returns partition details (leader, replicas, ISR) for a topic.
 func (a *App) GetTopicMetadata(profileID, brokerID, topic string) (broker.TopicMetadata, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return broker.TopicMetadata{}, err
 	}
-	return broker.GetTopicMetadata(a.ctx, b, password, topic)
+	defer cancel()
+	return broker.GetTopicMetadata(ctx, client, topic)
 }
 
 // ResetConsumerGroup commits new offsets for a consumer group on a topic.
 // offset: "earliest" | "latest" | unix milliseconds as string.
 func (a *App) ResetConsumerGroup(profileID, brokerID, topic, groupID, offset string) error {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return err
 	}
-	return broker.ResetConsumerGroup(a.ctx, b, password, topic, groupID, offset)
+	defer cancel()
+	return broker.ResetConsumerGroup(ctx, client, topic, groupID, offset)
 }
 
 // ListConsumerGroups returns lag metrics for all consumer groups on a topic.
 func (a *App) ListConsumerGroups(profileID, brokerID, topic string) ([]broker.GroupLag, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return nil, err
 	}
-	return broker.ListConsumerGroupsForTopic(a.ctx, b, password, topic)
+	defer cancel()
+	return broker.ListConsumerGroupsForTopic(ctx, client, topic)
 }
 
 // GetClusterInfo returns the cluster ID, controller node ID, and broker list.
 func (a *App) GetClusterInfo(profileID, brokerID string) (broker.ClusterInfo, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return broker.ClusterInfo{}, err
 	}
-	return broker.GetClusterInfo(a.ctx, b, password)
+	defer cancel()
+	return broker.GetClusterInfo(ctx, client)
 }
 
 // StartObserverAtTimestamp resolves partition offsets at the given Unix
 // millisecond timestamp and starts an observer session from those offsets.
 func (a *App) StartObserverAtTimestamp(profileID, brokerID, topic string, timestampMs int64) (string, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return "", err
 	}
-	partitionOffsets, err := broker.GetOffsetsAtTimestamp(a.ctx, b, password, topic, timestampMs)
+	partitionOffsets, err := broker.GetOffsetsAtTimestamp(ctx, client, topic, timestampMs)
+	cancel()
 	if err != nil {
 		return "", fmt.Errorf("resolve timestamp offsets: %w", err)
+	}
+
+	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	if err != nil {
+		return "", err
 	}
 	return a.streamMgr.StartObserver(b, password, topic, stream.ObserverOpts{
 		PartitionOffsets: partitionOffsets,
@@ -521,29 +561,32 @@ func (a *App) CreateTopic(profileID, brokerID string, req broker.CreateTopicRequ
 	if req.ReplicationFactor <= 0 {
 		return apperr.Positive("replication factor")
 	}
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return err
 	}
-	return broker.CreateTopic(a.ctx, b, password, req)
+	defer cancel()
+	return broker.CreateTopic(ctx, client, req)
 }
 
 // DeleteTopic deletes a topic from the given broker.
 func (a *App) DeleteTopic(profileID, brokerID, topicName string) error {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return err
 	}
-	return broker.DeleteTopic(a.ctx, b, password, topicName)
+	defer cancel()
+	return broker.DeleteTopic(ctx, client, topicName)
 }
 
 // GetTopicConfig returns the configuration for a topic.
 func (a *App) GetTopicConfig(profileID, brokerID, topicName string) ([]broker.TopicConfigEntry, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return nil, err
 	}
-	return broker.GetTopicConfig(a.ctx, b, password, topicName)
+	defer cancel()
+	return broker.GetTopicConfig(ctx, client, topicName)
 }
 
 // AlterTopicConfig updates a single configuration key for a topic.
@@ -551,11 +594,12 @@ func (a *App) AlterTopicConfig(profileID, brokerID, topicName, key, value string
 	if key == "" {
 		return apperr.Required("config key")
 	}
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return err
 	}
-	return broker.AlterTopicConfig(a.ctx, b, password, topicName, key, value)
+	defer cancel()
+	return broker.AlterTopicConfig(ctx, client, topicName, key, value)
 }
 
 // ── Stream sessions ───────────────────────────────────────────────────────────
@@ -608,29 +652,32 @@ func (a *App) StopSession(sessionID string) error {
 
 // GetClusterStats returns aggregate broker/topic/partition counts plus URP and offline partitions.
 func (a *App) GetClusterStats(profileID, brokerID string) (broker.ClusterStats, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return broker.ClusterStats{}, err
 	}
-	return broker.GetClusterStats(a.ctx, b, password)
+	defer cancel()
+	return broker.GetClusterStats(ctx, client)
 }
 
 // ListAllConsumerGroups returns all consumer groups with state and total lag.
 func (a *App) ListAllConsumerGroups(profileID, brokerID string) ([]broker.GroupSummary, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return nil, err
 	}
-	return broker.ListAllConsumerGroups(a.ctx, b, password)
+	defer cancel()
+	return broker.ListAllConsumerGroups(ctx, client)
 }
 
 // GetConsumerGroupDetail returns per-topic/per-partition lag for a single group.
 func (a *App) GetConsumerGroupDetail(profileID, brokerID, groupID string) (broker.GroupDetail, error) {
-	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return broker.GroupDetail{}, err
 	}
-	return broker.GetConsumerGroupDetail(a.ctx, b, password, groupID)
+	defer cancel()
+	return broker.GetConsumerGroupDetail(ctx, client, groupID)
 }
 
 // StartRateWatcher starts a goroutine that polls LEO for all topics every 30s

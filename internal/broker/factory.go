@@ -23,6 +23,7 @@ import (
 func NewClient(b profile.Broker, password string, extra ...kgo.Opt) (*kgo.Client, error) {
 	opts := []kgo.Opt{
 		kgo.SeedBrokers(b.Addresses...),
+		kgo.DialTimeout(TimeoutDial),
 	}
 
 	if b.SASL.Mechanism != "" {

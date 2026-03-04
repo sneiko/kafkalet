@@ -39,6 +39,8 @@ Most Kafka GUIs are heavy, slow, or require a running server. kafkalet is a **si
 - Browse topics, partitions, leaders and in-sync replicas
 - Create / delete topics; alter any topic config entry
 - Consumer group lag per partition; reset offsets to earliest, latest, or timestamp
+- Consumer group members — view client IDs, hosts, and assigned topics
+- Delete consumer groups
 - Produce messages with key, value, headers, and target partition
 - Cluster health: broker count, under-replicated and offline partitions
 
@@ -47,11 +49,16 @@ Most Kafka GUIs are heavy, slow, or require a running server. kafkalet is a **si
 - TLS server verification · mTLS mutual certificates
 - Passwords and tokens stored exclusively in the **OS keychain**
 
+**Topic organisation**
+- **Pinned topics** — star your most-used topics so they always appear first
+- **Topic groups** — organise topics into named folders
+- **Advanced search** — regex filtering and minimum partition count filter
+
 **Profile system**
 - Group brokers by environment: `production`, `staging`, `dev`
 - Multiple named credentials per broker — swap active credentials from the sidebar
 - Hot-swap profiles in one click: streams stop, new profile connects automatically
-- Import / export settings as JSON backup
+- Import / export settings as JSON backup (includes topic groups and pinned topics)
 
 **Extensibility**
 - **Schema Registry** — automatic Avro decoding via Confluent Schema Registry

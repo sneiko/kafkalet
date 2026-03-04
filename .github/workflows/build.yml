@@ -1,0 +1,146 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: darwin/amd64
+            artifact: kafkalet-darwin-amd64
+          - os: macos-latest
+            platform: darwin/arm64
+            artifact: kafkalet-darwin-arm64
+          - os: windows-latest
+            platform: windows/amd64
+            artifact: kafkalet-windows-amd64
+          - os: ubuntu-latest
+            platform: linux/amd64
+            artifact: kafkalet-linux-amd64
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev
+
+      - name: Install NSIS (Windows installer)
+        if: runner.os == 'Windows'
+        run: choco install nsis --no-progress -y
+
+      # ── Build ───────────────────────────────────────────────────────────────
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: wails build -platform ${{ matrix.platform }} -clean
+        env:
+          CGO_ENABLED: '1'
+
+      - name: Build (Windows — with NSIS installer)
+        if: runner.os == 'Windows'
+        run: wails build -platform ${{ matrix.platform }} -nsis -clean
+        env:
+          CGO_ENABLED: '1'
+
+      - name: Build (Linux)
+        if: runner.os == 'Linux'
+        run: wails build -platform ${{ matrix.platform }} -clean
+        env:
+          CGO_ENABLED: '1'
+
+      # ── Package ─────────────────────────────────────────────────────────────
+
+      - name: Package macOS app (zip)
+        if: runner.os == 'macOS'
+        run: |
+          cd build/bin
+          zip -r ../../${{ matrix.artifact }}.zip kafkalet.app
+
+      - name: Package Linux binary (tarball)
+        if: runner.os == 'Linux'
+        run: |
+          cd build/bin
+          tar czf ../../${{ matrix.artifact }}.tar.gz kafkalet
+
+      # ── Upload artifacts ────────────────────────────────────────────────────
+
+      - name: Upload artifact (macOS)
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.zip
+
+      - name: Upload artifact (Windows — exe)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: build/bin/kafkalet.exe
+
+      - name: Upload artifact (Windows — installer)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}-installer
+          path: build/bin/kafkalet-amd64-installer.exe
+
+      - name: Upload artifact (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}.tar.gz
+
+  # ── GitHub Release (tag builds only) ────────────────────────────────────────
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            dist/kafkalet-darwin-amd64/*.zip
+            dist/kafkalet-darwin-arm64/*.zip
+            dist/kafkalet-windows-amd64/*.exe
+            dist/kafkalet-windows-amd64-installer/*.exe
+            dist/kafkalet-linux-amd64/*.tar.gz

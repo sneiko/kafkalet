@@ -1,0 +1,18 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "kafkalet",
+  "outputfilename": "kafkalet",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "kafkalet"
+  },
+  "info": {
+    "productName": "kafkalet",
+    "productVersion": "0.1.0",
+    "copyright": "Copyright © 2025 kafkalet",
+    "comments": "Cross-platform Kafka desktop client"
+  }
+}

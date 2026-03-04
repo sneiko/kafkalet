@@ -3,6 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { Square, Trash2, CheckCheck, Loader2, Filter, Download, SendHorizonal } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ import { applyPlugin } from '@shared/lib/applyPlugin'
 import { ProduceDialog } from '@features/message-produce'
 
 const ROW_HEIGHT = 36
+const LS_FILTER_VISIBLE = 'filter-visible'
 
 export function StreamPane() {
   const { sessions, activeSessionId, appendMessage, removeSession, clearMessages } =
@@ -32,7 +34,9 @@ export function StreamPane() {
 
   const [committing, setCommitting] = useState(false)
   const [commitResult, setCommitResult] = useState<string | null>(null)
-  const [filterVisible, setFilterVisible] = useState(false)
+  const [filterVisible, setFilterVisible] = useState(
+    () => localStorage.getItem(LS_FILTER_VISIBLE) === 'true',
+  )
   const [filter, setFilter] = useState<FilterState>({ key: '', value: '' })
   const [selectedMessage, setSelectedMessage] = useState<KafkaMessage | null>(null)
   const [selectedDecoded, setSelectedDecoded] = useState<string | null>(null)
@@ -90,6 +94,13 @@ export function StreamPane() {
     }
   }
 
+  const toggleFilter = () => {
+    const next = !filterVisible
+    setFilterVisible(next)
+    localStorage.setItem(LS_FILTER_VISIBLE, String(next))
+    if (!next) setFilter({ key: '', value: '' })
+  }
+
   if (!session) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -129,28 +140,25 @@ export function StreamPane() {
 
         <div className="flex-1" />
 
-        <Button
+        <IconButton
           variant={filterVisible ? 'secondary' : 'ghost'}
           size="icon"
           className="h-6 w-6"
-          onClick={() => {
-            setFilterVisible((v) => !v)
-            if (filterVisible) setFilter({ key: '', value: '' })
-          }}
-          title="Toggle filter (regex)"
+          onClick={toggleFilter}
+          tooltip="Toggle filter (regex)"
         >
           <Filter className="h-3.5 w-3.5" />
-        </Button>
+        </IconButton>
 
-        <Button
+        <IconButton
           variant="ghost"
           size="icon"
           className="h-6 w-6"
-          title="Produce message"
+          tooltip="Produce message"
           onClick={() => setProduceOpen(true)}
         >
           <SendHorizonal className="h-3.5 w-3.5" />
-        </Button>
+        </IconButton>
 
         {session.mode === 'consumer' && (
           <Button
@@ -159,7 +167,7 @@ export function StreamPane() {
             className="h-6 gap-1 px-2 text-xs"
             onClick={handleCommit}
             disabled={committing || allMessages.length === 0}
-            title="Commit offsets to Kafka"
+            aria-label="Commit offsets to Kafka"
           >
             {committing ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -176,7 +184,7 @@ export function StreamPane() {
               variant="ghost"
               size="icon"
               className="h-6 w-6"
-              title="Export messages"
+              aria-label="Export messages"
               disabled={allMessages.length === 0}
             >
               <Download className="h-3.5 w-3.5" />
@@ -192,24 +200,24 @@ export function StreamPane() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Button
+        <IconButton
           variant="ghost"
           size="icon"
           className="h-6 w-6"
           onClick={handleClear}
-          title="Clear messages"
+          tooltip="Clear messages"
         >
           <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-        <Button
+        </IconButton>
+        <IconButton
           variant="ghost"
           size="icon"
           className="h-6 w-6 text-destructive hover:text-destructive"
           onClick={handleStop}
-          title="Stop session"
+          tooltip="Stop session"
         >
           <Square className="h-3.5 w-3.5 fill-current" />
-        </Button>
+        </IconButton>
       </div>
 
       {/* Filter bar */}

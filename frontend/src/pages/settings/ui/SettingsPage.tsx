@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, ChevronLeft, Download, Upload, Loader2 } from 'lu
 import { toast } from 'sonner'
 
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import { Input } from '@/shared/ui/input'
 import { Separator } from '@/shared/ui/separator'
 import {
@@ -173,9 +174,9 @@ export function SettingsPage({ onBack }: Props) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-3">
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onBack}>
+        <IconButton variant="ghost" size="icon" className="h-7 w-7" onClick={onBack} tooltip="Back">
           <ChevronLeft className="h-4 w-4" />
-        </Button>
+        </IconButton>
         <h1 className="text-sm font-semibold flex-1">Settings</h1>
         <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={handleImport} disabled={importing}>
           {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
@@ -257,16 +258,17 @@ export function SettingsPage({ onBack }: Props) {
                       Switch
                     </Button>
                   )}
-                  <Button
+                  <IconButton
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7 text-destructive hover:text-destructive"
                     onClick={() =>
                       setDeleteTarget({ type: 'profile', profileId: profile.id, name: profile.name })
                     }
+                    tooltip="Delete profile"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  </IconButton>
                 </div>
               </div>
             </CardHeader>
@@ -294,15 +296,16 @@ export function SettingsPage({ onBack }: Props) {
                       </p>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <Button
+                      <IconButton
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => setEditBroker({ profileId: profile.id, broker })}
+                        tooltip="Edit broker"
                       >
                         <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
+                      </IconButton>
+                      <IconButton
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 text-destructive hover:text-destructive"
@@ -314,9 +317,10 @@ export function SettingsPage({ onBack }: Props) {
                             name: broker.name,
                           })
                         }
+                        tooltip="Delete broker"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      </IconButton>
                     </div>
                   </div>
                 ))

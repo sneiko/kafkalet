@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import { Play, Users, Send, Info, MoreHorizontal, Trash2 } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import {
@@ -11,6 +12,7 @@ import type { Topic } from '../model/types'
 
 interface Props {
   topic: Topic
+  focused?: boolean
   onObserve: (topic: Topic) => void
   onConsume: (topic: Topic) => void
   onProduce: (topic: Topic) => void
@@ -18,12 +20,25 @@ interface Props {
   onDelete?: (topic: Topic) => void
 }
 
-export function TopicRow({ topic, onObserve, onConsume, onProduce, onInfo, onDelete }: Props) {
+export function TopicRow({ topic, focused, onObserve, onConsume, onProduce, onInfo, onDelete }: Props) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (focused && ref.current) {
+      ref.current.scrollIntoView({ block: 'nearest' })
+    }
+  }, [focused])
+
   return (
     <div
+      ref={ref}
+      role="option"
+      aria-selected={focused}
+      tabIndex={-1}
       className={cn(
         'group flex items-center gap-1 rounded px-2 py-1 text-xs',
         'hover:bg-accent/60 transition-colors cursor-pointer',
+        focused && 'ring-2 ring-ring',
       )}
       onClick={() => onObserve(topic)}
     >
@@ -36,7 +51,7 @@ export function TopicRow({ topic, onObserve, onConsume, onProduce, onInfo, onDel
         <DropdownMenuTrigger asChild>
           <button
             className="ml-1 p-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary/20 hover:text-primary"
-            title="Topic actions"
+            aria-label="Topic actions"
             onClick={(e) => e.stopPropagation()}
           >
             <MoreHorizontal className="h-3 w-3" />

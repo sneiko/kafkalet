@@ -111,7 +111,7 @@ export function ProfileSwitcher() {
         <Button
           variant="ghost"
           className="h-7 w-44 justify-between gap-1 px-2 text-sm"
-          title="Switch profile (⌘K)"
+          aria-label="Switch profile (⌘K)"
         >
           <span className="truncate">{activeProfile?.name ?? 'Select profile'}</span>
           {switching ? (

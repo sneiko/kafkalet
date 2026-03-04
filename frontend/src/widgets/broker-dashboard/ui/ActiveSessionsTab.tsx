@@ -1,6 +1,6 @@
 import { Eye, Users, Square } from 'lucide-react'
 
-import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import { useSessionStore } from '@entities/session'
 import { StopSession } from '@shared/api'
 
@@ -52,7 +52,7 @@ export function ActiveSessionsTab({ brokerId }: Props) {
           <span className="tabular-nums text-muted-foreground shrink-0">
             {session.messages.length.toLocaleString()} msgs
           </span>
-          <Button
+          <IconButton
             variant="ghost"
             size="icon"
             className="h-5 w-5 shrink-0 text-destructive hover:text-destructive"
@@ -60,10 +60,10 @@ export function ActiveSessionsTab({ brokerId }: Props) {
               e.stopPropagation()
               handleStop(session.id)
             }}
-            title="Stop session"
+            tooltip="Stop session"
           >
             <Square className="h-3 w-3 fill-current" />
-          </Button>
+          </IconButton>
         </button>
       ))}
     </div>

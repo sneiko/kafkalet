@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import type { FilterState } from '../lib/filter'
 
 interface Props {
@@ -26,13 +27,18 @@ export function FilterBar({ filter, onChange }: Props) {
         className="h-6 text-xs font-mono flex-1"
       />
       {hasFilter && (
-        <button
-          onClick={() => onChange({ key: '', value: '' })}
-          className="shrink-0 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
-          title="Clear filter"
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={() => onChange({ key: '', value: '' })}
+              className="shrink-0 p-0.5 rounded text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Clear filter"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Clear filter</TooltipContent>
+        </Tooltip>
       )}
     </div>
   )

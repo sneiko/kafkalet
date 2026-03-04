@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -68,24 +69,24 @@ export function PluginManagerPanel() {
               </p>
             </div>
             <div className="flex gap-1 shrink-0">
-              <Button
+              <IconButton
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7"
                 onClick={() => handleEdit(plugin)}
-                title="Edit plugin"
+                tooltip="Edit plugin"
               >
                 <Pencil className="h-3.5 w-3.5" />
-              </Button>
-              <Button
+              </IconButton>
+              <IconButton
                 variant="ghost"
                 size="icon"
                 className="h-7 w-7 text-destructive hover:text-destructive"
                 onClick={() => setDeletePlugin(plugin)}
-                title="Delete plugin"
+                tooltip="Delete plugin"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-              </Button>
+              </IconButton>
             </div>
           </div>
         ))

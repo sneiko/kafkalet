@@ -4,6 +4,7 @@ import { RefreshCw, Loader2, ChevronDown, ChevronRight, RotateCcw } from 'lucide
 import { useSessionStore } from '@entities/session'
 import { LagBadge } from '@entities/consumer-group'
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import { Separator } from '@/shared/ui/separator'
 import {
   DropdownMenu,
@@ -22,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { ListConsumerGroups, ResetConsumerGroup, type broker } from '@shared/api'
 
 export function GroupLagPanel() {
@@ -78,17 +80,22 @@ export function GroupLagPanel() {
     <div className="border-t border-border">
       <Separator />
       <div className="flex items-center gap-3 px-3 py-2 text-xs">
-        <button
-          className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-          onClick={() => setExpanded((v) => !v)}
-          title="Toggle lag details"
-        >
-          {expanded ? (
-            <ChevronDown className="h-3 w-3" />
-          ) : (
-            <ChevronRight className="h-3 w-3" />
-          )}
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+              onClick={() => setExpanded((v) => !v)}
+              aria-label="Toggle lag details"
+            >
+              {expanded ? (
+                <ChevronDown className="h-3 w-3" />
+              ) : (
+                <ChevronRight className="h-3 w-3" />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Toggle lag details</TooltipContent>
+        </Tooltip>
 
         <span className="text-muted-foreground shrink-0">Group</span>
         <LagBadge groupId={session.groupId} />
@@ -111,7 +118,7 @@ export function GroupLagPanel() {
           {session.messages.length.toLocaleString()} received
         </span>
 
-        {/* Reset dropdown */}
+        {/* Reset dropdown — keep Button with aria-label, no Tooltip (nested trigger) */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -119,7 +126,7 @@ export function GroupLagPanel() {
               size="icon"
               className="h-5 w-5 shrink-0"
               disabled={resetting}
-              title="Reset consumer group offset"
+              aria-label="Reset consumer group offset"
             >
               {resetting ? (
                 <Loader2 className="h-3 w-3 animate-spin" />
@@ -145,21 +152,20 @@ export function GroupLagPanel() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Refresh button */}
-        <Button
+        <IconButton
           variant="ghost"
           size="icon"
           className="h-5 w-5 shrink-0"
           onClick={handleRefresh}
           disabled={loading}
-          title="Refresh lag"
+          tooltip="Refresh lag"
         >
           {loading ? (
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
             <RefreshCw className="h-3 w-3" />
           )}
-        </Button>
+        </IconButton>
       </div>
 
       {/* Per-partition lag table */}

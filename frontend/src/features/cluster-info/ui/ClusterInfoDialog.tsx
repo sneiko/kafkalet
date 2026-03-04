@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog'
-import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import { Badge } from '@/shared/ui/badge'
 import { GetClusterInfo, type broker } from '@shared/api'
 import { MessageRatePanel } from '@features/message-rate'
@@ -55,20 +55,20 @@ export function ClusterInfoDialog({ profileId, brokerId, brokerName, open, onOpe
             <DialogTitle>
               Cluster — <span className="font-normal text-muted-foreground">{brokerName}</span>
             </DialogTitle>
-            <Button
+            <IconButton
               variant="ghost"
               size="icon"
               className="ml-auto h-6 w-6"
               onClick={load}
               disabled={loading}
-              title="Refresh"
+              tooltip="Refresh"
             >
               {loading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <RefreshCw className="h-3.5 w-3.5" />
               )}
-            </Button>
+            </IconButton>
           </div>
         </DialogHeader>
 

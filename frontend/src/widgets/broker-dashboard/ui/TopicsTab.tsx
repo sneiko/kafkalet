@@ -3,6 +3,7 @@ import { RefreshCw, Loader2, Plus, ChevronRight, ChevronDown, FolderOpen, Search
 import { toast } from 'sonner'
 
 import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import { Input } from '@/shared/ui/input'
 import {
   Dialog,
@@ -66,6 +67,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const [newGroupName, setNewGroupName] = useState('')
 
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set())
+  const [focusedTopicIndex, setFocusedTopicIndex] = useState(-1)
 
   const profile = profiles.find((p) => p.id === profileId)
   const broker = profile?.brokers.find((b) => b.id === brokerId)
@@ -173,52 +175,85 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
     await load()
   }
 
-  const renderTopicRow = (topic: Topic, groupId?: string) => (
-    <div key={topic.name} className="group/topic flex items-center">
-      <div className="flex-1 min-w-0">
-        <TopicRow
-          topic={topic}
-          onObserve={() => setObserveTarget(makeTarget(topic))}
-          onConsume={() => setConsumeTarget(makeTarget(topic))}
-          onProduce={() => setProduceTarget(makeTarget(topic))}
-          onInfo={() => setInfoTarget(makeTarget(topic))}
-          onDelete={() => setDeleteTopicTarget(makeTarget(topic))}
-        />
-      </div>
-      {topicGroups.length > 0 && !groupId && (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className="shrink-0 p-0.5 rounded text-muted-foreground opacity-0 group-hover/topic:opacity-100 transition-opacity hover:bg-accent/60"
-              title="Add to group"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <FolderOpen className="h-3 w-3" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="text-xs">
-            {topicGroups.map((g) => (
-              <DropdownMenuItem
-                key={g.id}
-                onClick={() => handleAssignToGroup(g.id, topic.name)}
+  // Build flat list of visible topics for keyboard nav
+  const flatTopics: Topic[] = []
+  for (const group of topicGroups) {
+    if (!collapsedGroups.has(group.id)) {
+      flatTopics.push(...filtered.filter((t) => group.topics.includes(t.name)))
+    }
+  }
+  flatTopics.push(...(topicGroups.length > 0 ? ungrouped : filtered))
+
+  const handleTopicListKeyDown = (e: React.KeyboardEvent) => {
+    if (flatTopics.length === 0) return
+    switch (e.key) {
+      case 'ArrowDown':
+        e.preventDefault()
+        setFocusedTopicIndex((i) => (i < flatTopics.length - 1 ? i + 1 : 0))
+        break
+      case 'ArrowUp':
+        e.preventDefault()
+        setFocusedTopicIndex((i) => (i > 0 ? i - 1 : flatTopics.length - 1))
+        break
+      case 'Enter':
+        e.preventDefault()
+        if (focusedTopicIndex >= 0 && focusedTopicIndex < flatTopics.length) {
+          setObserveTarget(makeTarget(flatTopics[focusedTopicIndex]))
+        }
+        break
+    }
+  }
+
+  const renderTopicRow = (topic: Topic, groupId?: string) => {
+    const flatIdx = flatTopics.indexOf(topic)
+    return (
+      <div key={topic.name} className="group/topic flex items-center">
+        <div className="flex-1 min-w-0">
+          <TopicRow
+            topic={topic}
+            focused={focusedTopicIndex === flatIdx}
+            onObserve={() => setObserveTarget(makeTarget(topic))}
+            onConsume={() => setConsumeTarget(makeTarget(topic))}
+            onProduce={() => setProduceTarget(makeTarget(topic))}
+            onInfo={() => setInfoTarget(makeTarget(topic))}
+            onDelete={() => setDeleteTopicTarget(makeTarget(topic))}
+          />
+        </div>
+        {topicGroups.length > 0 && !groupId && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className="shrink-0 p-0.5 rounded text-muted-foreground opacity-0 group-hover/topic:opacity-100 transition-opacity hover:bg-accent/60"
+                aria-label="Add to group"
+                onClick={(e) => e.stopPropagation()}
               >
-                {g.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )}
-      {groupId && (
-        <button
-          className="shrink-0 p-0.5 rounded text-muted-foreground opacity-0 group-hover/topic:opacity-100 transition-opacity hover:bg-accent/60 text-[10px]"
-          title="Remove from group"
-          onClick={() => handleRemoveFromGroup(groupId, topic.name)}
-        >
-          &times;
-        </button>
-      )}
-    </div>
-  )
+                <FolderOpen className="h-3 w-3" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="text-xs">
+              {topicGroups.map((g) => (
+                <DropdownMenuItem
+                  key={g.id}
+                  onClick={() => handleAssignToGroup(g.id, topic.name)}
+                >
+                  {g.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+        {groupId && (
+          <button
+            className="shrink-0 p-0.5 rounded text-muted-foreground opacity-0 group-hover/topic:opacity-100 transition-opacity hover:bg-accent/60 text-[10px]"
+            aria-label="Remove from group"
+            onClick={() => handleRemoveFromGroup(groupId, topic.name)}
+          >
+            &times;
+          </button>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="flex flex-col h-full">
@@ -251,24 +286,30 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
           <Plus className="h-3 w-3" />
           Topic
         </Button>
-        <Button
+        <IconButton
           variant="ghost"
           size="icon"
           className="h-7 w-7"
           onClick={() => load(true)}
           disabled={loading}
-          title="Refresh topics"
+          tooltip="Refresh topics"
         >
           {loading ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <RefreshCw className="h-3.5 w-3.5" />
           )}
-        </Button>
+        </IconButton>
       </div>
 
       {/* Topic list */}
-      <div className="flex-1 overflow-y-auto px-2 pb-2 min-h-0">
+      <div
+        className="flex-1 overflow-y-auto px-2 pb-2 min-h-0"
+        role="listbox"
+        tabIndex={0}
+        onKeyDown={handleTopicListKeyDown}
+        onBlur={() => setFocusedTopicIndex(-1)}
+      >
         {loading && topics.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-xs text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -307,7 +348,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
                     <button
                       onClick={() => handleDeleteGroup(group.id)}
                       className="ml-auto p-0.5 rounded text-muted-foreground/50 hover:text-destructive text-[10px] transition-colors"
-                      title="Delete group"
+                      aria-label="Delete group"
                     >
                       &times;
                     </button>

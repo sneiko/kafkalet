@@ -7,7 +7,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog'
-import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 import { GetTopicMetadata, ListConsumerGroups, GetTopicConfig, AlterTopicConfig, type broker } from '@shared/api'
@@ -87,20 +88,20 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
             <DialogTitle>
               <span className="font-mono text-sm">{topic}</span>
             </DialogTitle>
-            <Button
+            <IconButton
               variant="ghost"
               size="icon"
               className="ml-auto h-6 w-6"
               onClick={load}
               disabled={loading}
-              title="Refresh"
+              tooltip="Refresh"
             >
               {loading ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <RefreshCw className="h-3.5 w-3.5" />
               )}
-            </Button>
+            </IconButton>
           </div>
         </DialogHeader>
 
@@ -220,34 +221,49 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
                       <td className="py-1">
                         {editingKey === cfg.name ? (
                           <div className="flex gap-0.5 justify-end">
-                            <button
-                              onClick={() => handleSaveConfig(cfg.name)}
-                              disabled={savingKey === cfg.name}
-                              className="p-0.5 rounded hover:bg-accent/60 text-green-500"
-                              title="Save"
-                            >
-                              {savingKey === cfg.name ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <Check className="h-3 w-3" />
-                              )}
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              className="p-0.5 rounded hover:bg-accent/60 text-muted-foreground"
-                              title="Cancel"
-                            >
-                              <X className="h-3 w-3" />
-                            </button>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => handleSaveConfig(cfg.name)}
+                                  disabled={savingKey === cfg.name}
+                                  className="p-0.5 rounded hover:bg-accent/60 text-green-500"
+                                  aria-label="Save"
+                                >
+                                  {savingKey === cfg.name ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <Check className="h-3 w-3" />
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Save</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="p-0.5 rounded hover:bg-accent/60 text-muted-foreground"
+                                  aria-label="Cancel"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Cancel</TooltipContent>
+                            </Tooltip>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleStartEdit(cfg.name, cfg.value)}
-                            className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent/60 text-muted-foreground"
-                            title="Edit"
-                          >
-                            <Pencil className="h-3 w-3" />
-                          </button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => handleStartEdit(cfg.name, cfg.value)}
+                                className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-accent/60 text-muted-foreground"
+                                aria-label="Edit"
+                              >
+                                <Pencil className="h-3 w-3" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit</TooltipContent>
+                          </Tooltip>
                         )}
                       </td>
                     </tr>

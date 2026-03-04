@@ -1,5 +1,6 @@
 import { Eye, Users, X } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { useSessionStore } from '@entities/session'
 import { StopSession } from '@shared/api'
 
@@ -39,13 +40,18 @@ export function SessionTabBar() {
               {s.groupId}
             </span>
           )}
-          <button
-            onClick={(e) => handleClose(s.id, e)}
-            className="ml-1 rounded p-0.5 hover:text-destructive transition-colors"
-            title="Close session"
-          >
-            <X className="h-2.5 w-2.5" />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                onClick={(e) => handleClose(s.id, e)}
+                className="ml-1 rounded p-0.5 hover:text-destructive transition-colors"
+                aria-label="Close session"
+              >
+                <X className="h-2.5 w-2.5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Close session</TooltipContent>
+          </Tooltip>
         </button>
       ))}
     </div>

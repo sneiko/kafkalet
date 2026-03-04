@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { RefreshCw, Loader2 } from 'lucide-react'
 
-import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import { GetClusterStats, type broker } from '@shared/api'
 import { cn } from '@shared/lib/utils'
 
@@ -54,20 +54,20 @@ export function ClusterStatsBar({ profileId, brokerId }: Props) {
       ) : null}
 
       <div className="ml-auto">
-        <Button
+        <IconButton
           variant="ghost"
           size="icon"
           className="h-5 w-5"
           onClick={load}
           disabled={loading}
-          title="Refresh cluster stats"
+          tooltip="Refresh cluster stats"
         >
           {loading ? (
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
             <RefreshCw className="h-3 w-3" />
           )}
-        </Button>
+        </IconButton>
       </div>
     </div>
   )

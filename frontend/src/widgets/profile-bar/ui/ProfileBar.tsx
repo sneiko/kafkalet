@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Settings, Sun, Moon } from 'lucide-react'
-import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import { Separator } from '@/shared/ui/separator'
 import { ProfileSwitcher } from '@features/profile-switcher'
 import { useTheme } from '@shared/lib/useTheme'
@@ -32,24 +32,24 @@ export function ProfileBar({ onSettingsClick }: Props) {
       <Separator orientation="vertical" className="h-4" />
       <ProfileSwitcher />
       <div className="flex-1" />
-      <Button
+      <IconButton
         variant="ghost"
         size="icon"
         className="h-7 w-7"
         onClick={toggle}
-        title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
+        tooltip={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
       >
         {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-      </Button>
-      <Button
+      </IconButton>
+      <IconButton
         variant="ghost"
         size="icon"
         className="h-7 w-7"
         onClick={onSettingsClick}
-        title="Settings (⌘,)"
+        tooltip="Settings (⌘,)"
       >
         <Settings className="h-4 w-4" />
-      </Button>
+      </IconButton>
     </header>
   )
 }

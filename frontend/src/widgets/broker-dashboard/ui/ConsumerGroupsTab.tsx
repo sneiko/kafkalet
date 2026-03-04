@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { RefreshCw, Loader2, ChevronRight, ChevronDown, Search } from 'lucide-react'
 
-import { Button } from '@/shared/ui/button'
+import { IconButton } from '@/shared/ui/icon-button'
 import { Input } from '@/shared/ui/input'
 import { GroupStateBadge } from '@entities/consumer-group'
 import type { GroupSummary, GroupDetail } from '@entities/consumer-group'
@@ -76,20 +76,20 @@ export function ConsumerGroupsTab({ profileId, brokerId }: Props) {
             className="h-7 pl-7 text-xs"
           />
         </div>
-        <Button
+        <IconButton
           variant="ghost"
           size="icon"
           className="h-7 w-7"
           onClick={load}
           disabled={loading}
-          title="Refresh consumer groups"
+          tooltip="Refresh consumer groups"
         >
           {loading ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <RefreshCw className="h-3.5 w-3.5" />
           )}
-        </Button>
+        </IconButton>
       </div>
 
       {/* Content */}

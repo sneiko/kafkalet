@@ -14,6 +14,10 @@ export function AlterTopicConfig(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['AlterTopicConfig'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function CheckForUpdates() {
+  return window['go']['main']['App']['CheckForUpdates']();
+}
+
 export function ClearActiveBrokerCredential(arg1, arg2) {
   return window['go']['main']['App']['ClearActiveBrokerCredential'](arg1, arg2);
 }
@@ -70,6 +74,10 @@ export function GetActiveProfile() {
   return window['go']['main']['App']['GetActiveProfile']();
 }
 
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
+}
+
 export function GetClusterInfo(arg1, arg2) {
   return window['go']['main']['App']['GetClusterInfo'](arg1, arg2);
 }
@@ -116,6 +124,10 @@ export function ListProfiles() {
 
 export function ListTopics(arg1, arg2) {
   return window['go']['main']['App']['ListTopics'](arg1, arg2);
+}
+
+export function OpenURL(arg1) {
+  return window['go']['main']['App']['OpenURL'](arg1);
 }
 
 export function PinTopic(arg1, arg2, arg3) {

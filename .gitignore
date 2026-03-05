@@ -3,3 +3,4 @@
 CLAUDE.md
 docs/*
 build/
+build/bin/kafkalet.app/Contents/MacOS/kafkalet

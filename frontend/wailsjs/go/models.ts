@@ -567,3 +567,26 @@ export namespace profile {
 
 }
 
+export namespace updater {
+	
+	export class Release {
+	    tag_name: string;
+	    name: string;
+	    html_url: string;
+	    body: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Release(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.tag_name = source["tag_name"];
+	        this.name = source["name"];
+	        this.html_url = source["html_url"];
+	        this.body = source["body"];
+	    }
+	}
+
+}
+

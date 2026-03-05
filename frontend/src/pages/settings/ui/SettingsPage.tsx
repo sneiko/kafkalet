@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Pencil, Trash2, ChevronLeft, Download, Upload, Loader2 } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronLeft, Download, Upload, Loader2, RefreshCw, ExternalLink } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/shared/ui/button'
@@ -32,6 +32,9 @@ import {
   RenameProfile,
   ExportSettings,
   ImportSettings,
+  GetAppVersion,
+  CheckForUpdates,
+  OpenURL,
 } from '@shared/api'
 import { useProfileStore, type Profile, type Broker } from '@entities/profile'
 import { BrokerFormDialog } from '@features/broker-connect'
@@ -61,7 +64,13 @@ export function SettingsPage({ onBack }: Props) {
   const [showExportWarning, setShowExportWarning] = useState(false)
   const [includeSecrets, setIncludeSecrets] = useState(false)
   const [importing, setImporting] = useState(false)
+  const [appVersion, setAppVersion] = useState('')
+  const [checkingUpdate, setCheckingUpdate] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    GetAppVersion().then(setAppVersion)
+  }, [])
 
   useEffect(() => {
     if (editingProfileId && editInputRef.current) {
@@ -167,6 +176,29 @@ export function SettingsPage({ onBack }: Props) {
       toast.error('Import failed', { description: String(err) })
     } finally {
       setImporting(false)
+    }
+  }
+
+  const handleCheckUpdate = async () => {
+    setCheckingUpdate(true)
+    try {
+      const rel = await CheckForUpdates()
+      if (rel && rel.tag_name) {
+        toast('Update available', {
+          description: `Version ${rel.tag_name} is ready`,
+          duration: Infinity,
+          action: {
+            label: 'Download',
+            onClick: () => OpenURL(rel.html_url),
+          },
+        })
+      } else {
+        toast.success('You are on the latest version')
+      }
+    } catch (err) {
+      toast.error('Update check failed', { description: String(err) })
+    } finally {
+      setCheckingUpdate(false)
     }
   }
 
@@ -349,6 +381,37 @@ export function SettingsPage({ onBack }: Props) {
           </CardHeader>
           <CardContent>
             <PluginManagerPanel />
+          </CardContent>
+        </Card>
+
+        {/* About */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">About</CardTitle>
+            <CardDescription className="text-xs">
+              Version {appVersion || '...'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={handleCheckUpdate}
+              disabled={checkingUpdate}
+            >
+              {checkingUpdate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              Check for updates
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs gap-1"
+              onClick={() => OpenURL('https://github.com/sneiko/kafkalet')}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              GitHub
+            </Button>
           </CardContent>
         </Card>
       </div>

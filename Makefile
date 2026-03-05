@@ -2,6 +2,9 @@
         test vet check lint frontend-lint frontend-build frontend-install \
         generate clean help
 
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+LDFLAGS := -X main.Version=$(VERSION)
+
 # ── Dev ────────────────────────────────────────────────────────────────────────
 
 dev: ## Start development server with hot reload
@@ -10,25 +13,25 @@ dev: ## Start development server with hot reload
 # ── Build ──────────────────────────────────────────────────────────────────────
 
 build: ## Build for current platform
-	wails build
+	wails build -ldflags "$(LDFLAGS)"
 	@if [ "$$(uname)" = "Darwin" ] && [ -d build/bin/kafkalet.app ]; then \
 		codesign --force --deep -s - build/bin/kafkalet.app; \
 		echo "✓ ad-hoc signed: build/bin/kafkalet.app"; \
 	fi
 
 build-mac: ## Build for macOS Intel (darwin/amd64)
-	wails build -platform darwin/amd64
+	wails build -platform darwin/amd64 -ldflags "$(LDFLAGS)"
 	codesign --force --deep -s - build/bin/kafkalet.app
 
 build-mac-arm: ## Build for macOS Apple Silicon (darwin/arm64)
-	wails build -platform darwin/arm64
+	wails build -platform darwin/arm64 -ldflags "$(LDFLAGS)"
 	codesign --force --deep -s - build/bin/kafkalet.app
 
 build-win: ## Build for Windows amd64 with NSIS installer
-	wails build -platform windows/amd64 -nsis
+	wails build -platform windows/amd64 -nsis -ldflags "$(LDFLAGS)"
 
 build-linux: ## Build for Linux amd64
-	wails build -platform linux/amd64
+	wails build -platform linux/amd64 -ldflags "$(LDFLAGS)"
 
 build-all: build-mac build-mac-arm build-win build-linux ## Build for all platforms
 

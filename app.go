@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -18,12 +19,14 @@ import (
 	"kafkalet/internal/profile"
 	"kafkalet/internal/schema"
 	"kafkalet/internal/stream"
+	"kafkalet/internal/updater"
 )
 
 // App is the Wails-bound struct. All public methods become frontend RPCs.
 // Keep methods thin — delegate to internal/ packages.
 type App struct {
 	ctx          context.Context
+	version      string
 	profileStore *profile.Store
 	pluginStore  *plugin.Store
 	streamMgr    *stream.Manager
@@ -37,8 +40,8 @@ type App struct {
 	rateWatchersMu sync.Mutex
 }
 
-func NewApp() *App {
-	return &App{}
+func NewApp(version string) *App {
+	return &App{version: version}
 }
 
 func (a *App) startup(ctx context.Context) {
@@ -66,11 +69,41 @@ func (a *App) startup(ctx context.Context) {
 	a.rateWatchers = make(map[string]context.CancelFunc)
 
 	a.migrateCredentials()
+
+	go func() {
+		time.Sleep(3 * time.Second)
+		rel, err := updater.CheckLatest(a.version)
+		if err != nil {
+			slog.Warn("update check failed", "err", err)
+			return
+		}
+		if rel != nil {
+			runtime.EventsEmit(ctx, "app:update-available", rel)
+		}
+	}()
 }
 
 func (a *App) shutdown(_ context.Context) {
 	a.stopAllRateWatchers()
 	a.pool.Close()
+}
+
+// ── App info & updates ────────────────────────────────────────────────────────
+
+// GetAppVersion returns the current application version.
+func (a *App) GetAppVersion() string {
+	return a.version
+}
+
+// CheckForUpdates checks GitHub for a newer release.
+// Returns the release info if an update is available, nil otherwise.
+func (a *App) CheckForUpdates() (*updater.Release, error) {
+	return updater.CheckLatest(a.version)
+}
+
+// OpenURL opens the given URL in the user's default browser.
+func (a *App) OpenURL(url string) {
+	runtime.BrowserOpenURL(a.ctx, url)
 }
 
 // pooledClient resolves auth, gets or creates a pooled client, and returns a

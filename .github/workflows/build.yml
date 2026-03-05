@@ -63,19 +63,19 @@ jobs:
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
-        run: wails build -platform ${{ matrix.platform }} -clean
+        run: wails build -platform ${{ matrix.platform }} -clean -ldflags "-X main.Version=${{ github.ref_name }}"
         env:
           CGO_ENABLED: '1'
 
       - name: Build (Windows — with NSIS installer)
         if: runner.os == 'Windows'
-        run: wails build -platform ${{ matrix.platform }} -nsis -clean
+        run: wails build -platform ${{ matrix.platform }} -nsis -clean -ldflags "-X main.Version=${{ github.ref_name }}"
         env:
           CGO_ENABLED: '1'
 
       - name: Build (Linux)
         if: runner.os == 'Linux'
-        run: wails build -platform ${{ matrix.platform }} -tags webkit2_41 -clean
+        run: wails build -platform ${{ matrix.platform }} -tags webkit2_41 -clean -ldflags "-X main.Version=${{ github.ref_name }}"
         env:
           CGO_ENABLED: '1'
 

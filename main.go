@@ -8,11 +8,14 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 )
 
+// Version is injected via -ldflags at build time; "dev" in development.
+var Version = "dev"
+
 //go:embed all:frontend/dist
 var assets embed.FS
 
 func main() {
-	app := NewApp()
+	app := NewApp(Version)
 
 	err := wails.Run(&options.App{
 		Title:  "kafkalet",

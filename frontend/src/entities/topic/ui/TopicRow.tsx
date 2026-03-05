@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Play, Users, Send, Info, MoreHorizontal, Trash2, Star } from 'lucide-react'
+import { Play, Users, Send, Info, Search, MoreHorizontal, Trash2, Star } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import {
   DropdownMenu,
@@ -17,12 +17,13 @@ interface Props {
   onObserve: (topic: Topic) => void
   onConsume: (topic: Topic) => void
   onProduce: (topic: Topic) => void
+  onSearch: (topic: Topic) => void
   onInfo: (topic: Topic) => void
   onDelete?: (topic: Topic) => void
   onTogglePin?: (topic: Topic) => void
 }
 
-export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProduce, onInfo, onDelete, onTogglePin }: Props) {
+export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProduce, onSearch, onInfo, onDelete, onTogglePin }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -88,6 +89,10 @@ export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProdu
           <DropdownMenuItem onClick={() => onProduce(topic)}>
             <Send className="mr-2 h-3 w-3" />
             Produce
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onSearch(topic)}>
+            <Search className="mr-2 h-3 w-3" />
+            Search
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onInfo(topic)}>
             <Info className="mr-2 h-3 w-3" />

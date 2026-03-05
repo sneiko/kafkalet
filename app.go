@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"kafkalet/internal/plugin"
 	"kafkalet/internal/profile"
 	"kafkalet/internal/schema"
+	"kafkalet/internal/search"
 	"kafkalet/internal/stream"
 	"kafkalet/internal/updater"
 )
@@ -30,6 +32,7 @@ type App struct {
 	profileStore *profile.Store
 	pluginStore  *plugin.Store
 	streamMgr    *stream.Manager
+	searchMgr    *search.Manager
 	pool         *broker.Pool
 	metaCache    *broker.MetaCache
 
@@ -56,9 +59,11 @@ func (a *App) startup(ctx context.Context) {
 
 	a.pluginStore = plugin.NewStore()
 
-	a.streamMgr = stream.NewManager(ctx, func(name string, data any) {
+	emit := func(name string, data any) {
 		runtime.EventsEmit(ctx, name, data)
-	})
+	}
+	a.streamMgr = stream.NewManager(ctx, emit)
+	a.searchMgr = search.NewManager(ctx, emit)
 
 	a.pool = broker.NewPool(broker.PoolTTL, func(b profile.Broker, pw string) (*kgo.Client, error) {
 		return broker.NewClient(b, pw)
@@ -84,6 +89,7 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) shutdown(_ context.Context) {
+	a.searchMgr.StopAll()
 	a.stopAllRateWatchers()
 	a.pool.Close()
 }
@@ -397,6 +403,7 @@ func (a *App) RenameProfile(id, name string) error {
 // caches, shared registries, and rate watchers, then switches the active profile.
 func (a *App) SwitchProfile(id string) error {
 	a.streamMgr.StopAll()
+	a.searchMgr.StopAll()
 	a.pool.CloseAll()
 	a.metaCache.InvalidateAll()
 	a.stopAllRateWatchers()
@@ -458,6 +465,7 @@ func (a *App) DeleteBrokerCredential(profileID, brokerID, credentialID string) e
 // clears caches/registry/rate watcher, sets the active credential, and emits an event.
 func (a *App) SwitchBrokerCredential(profileID, brokerID, credentialID string) error {
 	a.streamMgr.StopBroker(brokerID)
+	a.searchMgr.StopBroker(brokerID)
 	a.pool.EvictBroker(brokerID)
 	a.metaCache.InvalidateBroker(brokerID)
 	a.stopRateWatcher(brokerID)
@@ -749,6 +757,49 @@ func (a *App) CommitSession(sessionID string) error {
 // StopSession stops an active stream session.
 func (a *App) StopSession(sessionID string) error {
 	a.streamMgr.Stop(sessionID)
+	return nil
+}
+
+// ── Search sessions ───────────────────────────────────────────────────────────
+
+// StartSearch starts a topic search session. Returns the session ID.
+// Frontend subscribes to "search:match:<sessionID>" and "search:progress:<sessionID>".
+func (a *App) StartSearch(profileID, brokerID string, req search.SearchRequest) (string, error) {
+	if strings.TrimSpace(req.Topic) == "" {
+		return "", apperr.Required("topic")
+	}
+	if strings.TrimSpace(req.KeyPattern) == "" && strings.TrimSpace(req.ValuePattern) == "" {
+		return "", apperr.Validation("pattern", "at least one of key or value pattern is required")
+	}
+	if req.UseRegex {
+		if req.KeyPattern != "" {
+			if _, err := regexp.Compile(req.KeyPattern); err != nil {
+				return "", apperr.Validation("keyPattern", "invalid regex: "+err.Error())
+			}
+		}
+		if req.ValuePattern != "" {
+			if _, err := regexp.Compile(req.ValuePattern); err != nil {
+				return "", apperr.Validation("valuePattern", "invalid regex: "+err.Error())
+			}
+		}
+	}
+	if req.MaxResults <= 0 {
+		req.MaxResults = 1000
+	}
+	if req.MaxScan <= 0 {
+		req.MaxScan = 1_000_000
+	}
+
+	b, password, err := a.resolveBrokerAuth(profileID, brokerID)
+	if err != nil {
+		return "", err
+	}
+	return a.searchMgr.StartSearch(b, password, req, a.getOrCreateRegistry(profileID, b))
+}
+
+// StopSearch stops an active search session.
+func (a *App) StopSearch(sessionID string) error {
+	a.searchMgr.Stop(sessionID)
 	return nil
 }
 

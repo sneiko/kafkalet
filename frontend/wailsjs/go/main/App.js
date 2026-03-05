@@ -182,8 +182,16 @@ export function StartRateWatcher(arg1, arg2) {
   return window['go']['main']['App']['StartRateWatcher'](arg1, arg2);
 }
 
+export function StartSearch(arg1, arg2, arg3) {
+  return window['go']['main']['App']['StartSearch'](arg1, arg2, arg3);
+}
+
 export function StopRateWatcher(arg1) {
   return window['go']['main']['App']['StopRateWatcher'](arg1);
+}
+
+export function StopSearch(arg1) {
+  return window['go']['main']['App']['StopSearch'](arg1);
 }
 
 export function StopSession(arg1) {

@@ -12,6 +12,8 @@ import {
 } from '@/shared/ui/dropdown-menu'
 import { EventsOn, StopSession, CommitSession } from '@shared/api'
 import { useSessionStore } from '@entities/session'
+import { useSearchStore } from '@entities/search'
+import { SearchResultsPane } from '@features/topic-search'
 import { MessageRow, MessageDetailDialog } from '@entities/message'
 import type { KafkaMessage } from '@entities/message'
 import { FilterBar, applyFilter } from '@features/message-filter'
@@ -25,6 +27,16 @@ const ROW_HEIGHT = 36
 const LS_FILTER_VISIBLE = 'filter-visible'
 
 export function StreamPane() {
+  const activeSearchId = useSearchStore((s) => s.activeSearchId)
+
+  if (activeSearchId) {
+    return <SearchResultsPane sessionId={activeSearchId} />
+  }
+
+  return <StreamPaneInner />
+}
+
+function StreamPaneInner() {
   const { sessions, activeSessionId, appendMessage, removeSession, clearMessages } =
     useSessionStore()
   const plugins = usePluginStore((s) => s.plugins)

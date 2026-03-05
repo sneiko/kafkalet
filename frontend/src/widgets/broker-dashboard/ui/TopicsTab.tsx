@@ -37,6 +37,7 @@ import { ConsumeDialog } from '@features/topic-consume'
 import { ProduceDialog } from '@features/message-produce'
 import { TopicInfoDialog } from '@features/topic-info'
 import { CreateTopicDialog } from '@features/topic-create'
+import { SearchDialog } from '@features/topic-search'
 import { ListTopics, DeleteTopic, SaveTopicGroup, DeleteTopicGroup, ListProfiles, InvalidateTopicsCache, PinTopic, UnpinTopic } from '@shared/api'
 
 interface TopicTarget {
@@ -64,6 +65,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const [consumeTarget, setConsumeTarget] = useState<TopicTarget | null>(null)
   const [produceTarget, setProduceTarget] = useState<TopicTarget | null>(null)
   const [infoTarget, setInfoTarget] = useState<TopicTarget | null>(null)
+  const [searchTarget, setSearchTarget] = useState<TopicTarget | null>(null)
   const [deleteTopicTarget, setDeleteTopicTarget] = useState<TopicTarget | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -271,6 +273,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
             onObserve={() => setObserveTarget(makeTarget(topic))}
             onConsume={() => setConsumeTarget(makeTarget(topic))}
             onProduce={() => setProduceTarget(makeTarget(topic))}
+            onSearch={() => setSearchTarget(makeTarget(topic))}
             onInfo={() => setInfoTarget(makeTarget(topic))}
             onDelete={() => setDeleteTopicTarget(makeTarget(topic))}
             onTogglePin={() => handleTogglePin(topic)}
@@ -495,6 +498,14 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
           {...produceTarget}
           open={Boolean(produceTarget)}
           onOpenChange={(v) => !v && setProduceTarget(null)}
+        />
+      )}
+
+      {searchTarget && (
+        <SearchDialog
+          {...searchTarget}
+          open={Boolean(searchTarget)}
+          onOpenChange={(v) => !v && setSearchTarget(null)}
         />
       )}
 

@@ -4,6 +4,7 @@ import {profile} from '../models';
 import {updater} from '../models';
 import {broker} from '../models';
 import {plugin} from '../models';
+import {search} from '../models';
 
 export function AddBroker(arg1:string,arg2:profile.Broker):Promise<profile.Broker>;
 
@@ -95,7 +96,11 @@ export function StartObserverAtTimestamp(arg1:string,arg2:string,arg3:string,arg
 
 export function StartRateWatcher(arg1:string,arg2:string):Promise<void>;
 
+export function StartSearch(arg1:string,arg2:string,arg3:search.SearchRequest):Promise<string>;
+
 export function StopRateWatcher(arg1:string):Promise<void>;
+
+export function StopSearch(arg1:string):Promise<void>;
 
 export function StopSession(arg1:string):Promise<void>;
 

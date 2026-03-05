@@ -567,6 +567,39 @@ export namespace profile {
 
 }
 
+export namespace search {
+	
+	export class SearchRequest {
+	    topic: string;
+	    keyPattern: string;
+	    valuePattern: string;
+	    partitions: number[];
+	    timestampFrom?: number;
+	    timestampTo?: number;
+	    maxResults: number;
+	    maxScan: number;
+	    useRegex: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SearchRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.topic = source["topic"];
+	        this.keyPattern = source["keyPattern"];
+	        this.valuePattern = source["valuePattern"];
+	        this.partitions = source["partitions"];
+	        this.timestampFrom = source["timestampFrom"];
+	        this.timestampTo = source["timestampTo"];
+	        this.maxResults = source["maxResults"];
+	        this.maxScan = source["maxScan"];
+	        this.useRegex = source["useRegex"];
+	    }
+	}
+
+}
+
 export namespace updater {
 	
 	export class Release {

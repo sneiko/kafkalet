@@ -111,7 +111,10 @@ Download the latest build from the [Releases](https://github.com/sneiko/kafkalet
 | Windows | `kafkalet-windows-amd64-installer.exe` | Requires WebView2 (pre-installed on Win 11) |
 | Linux | `kafkalet-linux-amd64.tar.gz` | See Linux notes below |
 
-**macOS:** on first launch right-click → _Open_ if blocked by Gatekeeper.
+**macOS:** on first launch right-click → _Open_ if blocked by Gatekeeper. If you see _"kafkalet.app is damaged and can't be opened"_, run:
+```bash
+xattr -cr /path/to/kafkalet.app
+```
 
 **Linux dependencies:**
 ```bash

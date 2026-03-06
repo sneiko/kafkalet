@@ -13,13 +13,15 @@ interface Props {
 export function ClusterStatsBar({ profileId, brokerId }: Props) {
   const [stats, setStats] = useState<broker.ClusterStats | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError(false)
     try {
       setStats(await GetClusterStats(profileId, brokerId))
     } catch {
-      // silently ignore — bar just shows nothing
+      setError(true)
     } finally {
       setLoading(false)
     }
@@ -51,6 +53,8 @@ export function ClusterStatsBar({ profileId, brokerId }: Props) {
             alert={stats.offlinePartitions > 0}
           />
         </>
+      ) : error ? (
+        <span className="text-destructive">Failed to load cluster stats</span>
       ) : null}
 
       <div className="ml-auto">

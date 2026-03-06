@@ -18,6 +18,7 @@ interface ActiveBroker {
 const MIN_DASHBOARD_HEIGHT = 150
 const MIN_STREAM_HEIGHT = 120
 const DEFAULT_SPLIT_RATIO = 0.55
+const LS_SPLIT_RATIO = 'split-ratio'
 
 export function MainPage() {
   const [view, setView] = useState<'main' | 'settings'>('main')
@@ -33,18 +34,26 @@ export function MainPage() {
   const isDragging = useRef(false)
   const dragStartY = useRef(0)
   const dragStartHeight = useRef(0)
+  const topHeightRef = useRef<number | null>(null)
 
   // Initialize top height based on container size
   const initTopHeight = useCallback(() => {
     if (containerRef.current && hasSessions) {
       const total = containerRef.current.offsetHeight
-      setTopHeight(Math.round(total * DEFAULT_SPLIT_RATIO))
+      const saved = localStorage.getItem(LS_SPLIT_RATIO)
+      const ratio = saved ? parseFloat(saved) : DEFAULT_SPLIT_RATIO
+      const clamped = Math.min(0.85, Math.max(0.15, isNaN(ratio) ? DEFAULT_SPLIT_RATIO : ratio))
+      setTopHeight(Math.round(total * clamped))
     }
   }, [hasSessions])
 
   useEffect(() => {
     initTopHeight()
   }, [initTopHeight])
+
+  useEffect(() => {
+    topHeightRef.current = topHeight
+  }, [topHeight])
 
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
@@ -63,6 +72,12 @@ export function MainPage() {
       isDragging.current = false
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
+      if (containerRef.current && topHeightRef.current != null) {
+        const total = containerRef.current.offsetHeight
+        if (total > 0) {
+          localStorage.setItem(LS_SPLIT_RATIO, String(topHeightRef.current / total))
+        }
+      }
     }
     document.addEventListener('mousemove', onMouseMove)
     document.addEventListener('mouseup', onMouseUp)

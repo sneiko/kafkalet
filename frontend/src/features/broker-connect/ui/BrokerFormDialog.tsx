@@ -200,23 +200,23 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{isEdit ? 'Edit Broker' : 'Add Broker'}</DialogTitle>
         </DialogHeader>
 
         {isEdit ? (
-          <Tabs defaultValue="connection">
-            <TabsList className="w-full">
+          <Tabs defaultValue="connection" className="flex flex-col flex-1 min-h-0">
+            <TabsList className="w-full shrink-0">
               <TabsTrigger value="connection" className="flex-1">Connection</TabsTrigger>
               <TabsTrigger value="users" className="flex-1">
                 Users {credentials.length > 0 && <span className="ml-1 text-xs text-muted-foreground">({credentials.length})</span>}
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="connection">
+            <TabsContent value="connection" className="flex-1 overflow-y-auto min-h-0 mt-2">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-2">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <ConnectionFields form={form} />
                   {form.formState.errors.root && (
                     <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
@@ -240,7 +240,7 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
               </Form>
             </TabsContent>
 
-            <TabsContent value="users">
+            <TabsContent value="users" className="flex-1 overflow-y-auto min-h-0 mt-2">
               <UsersTab
                 profileId={profileId}
                 broker={broker!}
@@ -251,19 +251,21 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
           </Tabs>
         ) : (
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <ConnectionFields form={form} />
-              <InitialCredentialFields form={form} />
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-1 min-h-0">
+              <div className="flex-1 overflow-y-auto space-y-4 px-1 min-h-0">
+                <ConnectionFields form={form} />
+                <InitialCredentialFields form={form} />
 
-              {form.formState.errors.root && (
-                <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
-              )}
-              {addTest.testResult && (
-                <p className={addTest.testResult === 'Connection successful' ? 'text-sm text-green-500' : 'text-sm text-destructive'}>
-                  {addTest.testResult}
-                </p>
-              )}
-              <DialogFooter className="gap-2">
+                {form.formState.errors.root && (
+                  <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
+                )}
+                {addTest.testResult && (
+                  <p className={addTest.testResult === 'Connection successful' ? 'text-sm text-green-500' : 'text-sm text-destructive'}>
+                    {addTest.testResult}
+                  </p>
+                )}
+              </div>
+              <DialogFooter className="gap-2 pt-4 shrink-0">
                 <Button type="button" variant="outline" size="sm" onClick={handleTestDirect} disabled={addTest.testing}>
                   {addTest.testing && <Loader2 className="animate-spin" />}
                   Test Connection

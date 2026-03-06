@@ -24,6 +24,31 @@ Most Kafka GUIs are heavy, slow, or require a running server. kafkalet is a **si
 
 ---
 
+## Installation
+
+Download the latest build from the [Releases](https://github.com/sneiko/kafkalet/releases) page.
+
+| Platform | File | Notes |
+|---|---|---|
+| macOS (Apple Silicon) | `kafkalet-darwin-arm64.zip` | Drag `kafkalet.app` to Applications |
+| macOS (Intel) | `kafkalet-darwin-amd64.zip` | Drag `kafkalet.app` to Applications |
+| Windows | `kafkalet-windows-amd64-installer.exe` | Requires WebView2 (pre-installed on Win 11) |
+| Linux | `kafkalet-linux-amd64.tar.gz` | See Linux notes below |
+
+**macOS:** on first launch right-click → _Open_ if blocked by Gatekeeper. If you see _"kafkalet.app is damaged and can't be opened"_, run:
+
+```bash
+xattr -cr /path/to/kafkalet.app
+```
+
+**Linux dependencies:**
+
+```bash
+sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libsecret-1-0
+```
+
+---
+
 ## Features
 
 **Stream messages in real time**
@@ -63,63 +88,6 @@ Most Kafka GUIs are heavy, slow, or require a running server. kafkalet is a **si
 **Extensibility**
 - **Schema Registry** — automatic Avro decoding via Confluent Schema Registry
 - **JS decoder plugins** — transform raw bytes for Protobuf, MessagePack, or any custom format
-
----
-
-## Screenshots
-
-### Observe a topic — choose your start position
-
-![Observe topic dialog](screenshots/Screenshot-1.png)
-
-Start from the latest offset, replay from the beginning, or seek directly to a date/time — without touching any consumer group offset.
-
----
-
-### Produce a message
-
-![Produce message dialog](screenshots/Screenshot-3.png)
-
-Send test messages with a custom key, JSON value, headers, and target partition directly from the stream view.
-
----
-
-### Inspect every message in detail
-
-![Message detail view](screenshots/Screenshot-4.png)
-
-Click any row to open the full message: topic, partition, offset, timestamp, key, and pretty-printed JSON value — with one-click copy.
-
----
-
-### Manage profiles and brokers
-
-![Settings page](screenshots/Screenshot-2.png)
-
-Create profiles per environment, add brokers with full auth config, and install JavaScript decoder plugins — all in one place.
-
----
-
-## Installation
-
-Download the latest build from the [Releases](https://github.com/sneiko/kafkalet/releases) page.
-
-| Platform | File | Notes |
-|---|---|---|
-| macOS (Apple Silicon) | `kafkalet-darwin-arm64.zip` | Drag `kafkalet.app` to Applications |
-| macOS (Intel) | `kafkalet-darwin-amd64.zip` | Drag `kafkalet.app` to Applications |
-| Windows | `kafkalet-windows-amd64-installer.exe` | Requires WebView2 (pre-installed on Win 11) |
-| Linux | `kafkalet-linux-amd64.tar.gz` | See Linux notes below |
-
-**macOS:** on first launch right-click → _Open_ if blocked by Gatekeeper. If you see _"kafkalet.app is damaged and can't be opened"_, run:
-```bash
-xattr -cr /path/to/kafkalet.app
-```
-
-**Linux dependencies:**
-```bash
-sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libsecret-1-0
-```
 
 ---
 

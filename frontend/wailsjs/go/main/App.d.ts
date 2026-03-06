@@ -82,6 +82,8 @@ export function SavePlugin(arg1:plugin.Plugin):Promise<plugin.Plugin>;
 
 export function SaveTopicGroup(arg1:string,arg2:string,arg3:profile.TopicGroup):Promise<void>;
 
+export function SelectCertificateFile():Promise<string>;
+
 export function SetBrokerPassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SetNamedCredentialPassword(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;

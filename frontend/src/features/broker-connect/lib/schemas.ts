@@ -5,6 +5,10 @@ export const baseSchema = z.object({
   name: z.string().min(1, 'Required'),
   addresses: z.string().min(1, 'Required'),
   tlsEnabled: z.boolean(),
+  tlsCaCertPath: z.string(),
+  tlsClientCertPath: z.string(),
+  tlsClientKeyPath: z.string(),
+  tlsInsecureSkipVerify: z.boolean(),
   srUrl: z.string(),
   srUsername: z.string(),
   srPassword: z.string(),
@@ -54,6 +58,10 @@ export type CredFormValues = z.infer<typeof credSchema>
 export function buildTestParams(values: {
   addresses: string
   tlsEnabled: boolean
+  tlsCaCertPath: string
+  tlsClientCertPath: string
+  tlsClientKeyPath: string
+  tlsInsecureSkipVerify: boolean
   initialCredMechanism: string
   initialCredUsername: string
   initialCredPassword: string
@@ -64,7 +72,7 @@ export function buildTestParams(values: {
   const addresses = values.addresses.split(',').map((s) => s.trim()).filter(Boolean)
   const mechanism = values.initialCredMechanism
   const isOAuth = mechanism === 'OAUTHBEARER'
-  const tls = { enabled: values.tlsEnabled, insecureSkipVerify: false, caCertPath: '', clientCertPath: '', clientKeyPath: '' } as unknown as profile.TLSConfig
+  const tls = { enabled: values.tlsEnabled, insecureSkipVerify: values.tlsInsecureSkipVerify, caCertPath: values.tlsCaCertPath, clientCertPath: values.tlsClientCertPath, clientKeyPath: values.tlsClientKeyPath } as unknown as profile.TLSConfig
   const sasl = isOAuth
     ? { mechanism: 'OAUTHBEARER', username: '', oauthTokenURL: values.initialCredOAuthTokenURL, oauthClientID: values.initialCredOAuthClientId, oauthScopes: values.initialCredOAuthScopes.split(' ').filter(Boolean) } as unknown as profile.SASLConfig
     : { mechanism, username: values.initialCredUsername, oauthTokenURL: '', oauthClientID: '', oauthScopes: [] } as unknown as profile.SASLConfig

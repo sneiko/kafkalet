@@ -154,6 +154,10 @@ export function SaveTopicGroup(arg1, arg2, arg3) {
   return window['go']['main']['App']['SaveTopicGroup'](arg1, arg2, arg3);
 }
 
+export function SelectCertificateFile() {
+  return window['go']['main']['App']['SelectCertificateFile']();
+}
+
 export function SetBrokerPassword(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetBrokerPassword'](arg1, arg2, arg3);
 }

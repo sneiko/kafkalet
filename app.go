@@ -298,6 +298,17 @@ func (a *App) ExportSettings(includeSecrets bool) error {
 
 // ImportSettings reads profiles from a user-chosen JSON file and merges them
 // (adds profiles not already present by ID), restoring passwords to keychain.
+/// SelectCertificateFile opens a native file dialog for selecting certificate/key files.
+func (a *App) SelectCertificateFile() (string, error) {
+	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select Certificate File",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Certificates (*.pem, *.crt, *.cert, *.key)", Pattern: "*.pem;*.crt;*.cert;*.key"},
+			{DisplayName: "All Files", Pattern: "*"},
+		},
+	})
+}
+
 // Emits "profiles:imported" on success.
 func (a *App) ImportSettings() error {
 	path, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{

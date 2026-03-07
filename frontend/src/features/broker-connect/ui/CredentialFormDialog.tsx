@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Plus, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import {
@@ -42,6 +42,10 @@ const schema = z.object({
   mechanism: z.string(),
   username: z.string(),
   password: z.string(),
+  oauthTokenURL: z.string(),
+  oauthClientId: z.string(),
+  oauthScopes: z.string(),
+  oauthExtensions: z.array(z.object({ key: z.string(), value: z.string() })),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -66,6 +70,10 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
       mechanism: 'PLAIN',
       username: '',
       password: '',
+      oauthTokenURL: '',
+      oauthClientId: '',
+      oauthScopes: '',
+      oauthExtensions: [],
     },
   })
 
@@ -77,9 +85,41 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
     }
   }, [open])
 
+  const mechanism = form.watch('mechanism')
+  const isOAuth = mechanism === 'OAUTHBEARER'
+  const oauthTokenURL = form.watch('oauthTokenURL')
+  const isClientCreds = isOAuth && oauthTokenURL.trim() !== ''
+  const { fields: extFields, append: appendExt, remove: removeExt } = useFieldArray({
+    control: form.control,
+    name: 'oauthExtensions',
+  })
+
   const currentBroker = profiles
     .find((p) => p.id === profileId)
     ?.brokers.find((b) => b.id === brokerId)
+
+  const buildSaslConfig = (values: FormValues) => {
+    const extensions = Object.fromEntries(
+      values.oauthExtensions.filter(e => e.key.trim()).map(e => [e.key.trim(), e.value])
+    )
+    return values.mechanism === 'OAUTHBEARER'
+      ? {
+          mechanism: 'OAUTHBEARER',
+          username: '',
+          oauthTokenURL: values.oauthTokenURL,
+          oauthClientID: values.oauthClientId,
+          oauthScopes: values.oauthScopes.split(' ').filter(Boolean),
+          oauthExtensions: extensions,
+        } as unknown as profile.SASLConfig
+      : {
+          mechanism: values.mechanism,
+          username: values.username,
+          oauthTokenURL: '',
+          oauthClientID: '',
+          oauthScopes: [],
+          oauthExtensions: {},
+        } as unknown as profile.SASLConfig
+  }
 
   const handleTest = async () => {
     if (!currentBroker) return
@@ -90,13 +130,7 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
       await TestConnectionDirect(
         currentBroker.addresses,
         currentBroker.tls as unknown as profile.TLSConfig,
-        {
-          mechanism: values.mechanism,
-          username: values.username,
-          oauthTokenURL: '',
-          oauthClientID: '',
-          oauthScopes: [],
-        } as unknown as profile.SASLConfig,
+        buildSaslConfig(values),
         values.password
       )
       setTestResult('Connection successful')
@@ -110,6 +144,8 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
   const onSubmit = async (values: FormValues) => {
     if (!currentBroker) return
 
+    const sasl = buildSaslConfig(values)
+
     // Auto-test before saving
     setAutoTesting(true)
     setTestResult(null)
@@ -117,13 +153,7 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
       await TestConnectionDirect(
         currentBroker.addresses,
         currentBroker.tls as unknown as profile.TLSConfig,
-        {
-          mechanism: values.mechanism,
-          username: values.username,
-          oauthTokenURL: '',
-          oauthClientID: '',
-          oauthScopes: [],
-        } as unknown as profile.SASLConfig,
+        sasl,
         values.password
       )
     } catch (err) {
@@ -137,13 +167,7 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
       const newCred = await AddBrokerCredential(profileId, brokerId, {
         id: '',
         name: values.name,
-        sasl: {
-          mechanism: values.mechanism,
-          username: values.username,
-          oauthTokenURL: '',
-          oauthClientID: '',
-          oauthScopes: [],
-        },
+        sasl,
       } as unknown as profile.NamedCredential) as unknown as NamedCredential
 
       if (values.password) {
@@ -203,38 +227,165 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
                       <SelectItem value="PLAIN">PLAIN</SelectItem>
                       <SelectItem value="SCRAM-SHA-256">SCRAM-SHA-256</SelectItem>
                       <SelectItem value="SCRAM-SHA-512">SCRAM-SHA-512</SelectItem>
+                      <SelectItem value="OAUTHBEARER">OAUTHBEARER</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="username"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Username</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Password <span className="text-muted-foreground">(stored in keychain)</span></FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {!isOAuth && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password <span className="text-muted-foreground">(stored in keychain)</span></FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+            {isOAuth && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="oauthTokenURL"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        Token URL{' '}
+                        <span className="text-muted-foreground">(optional — leave blank for static token)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="https://auth.example.com/oauth/token" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {isClientCreds && (
+                  <>
+                    <FormField
+                      control={form.control}
+                      name="oauthClientId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Client ID</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="oauthScopes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            Scopes{' '}
+                            <span className="text-muted-foreground">(space-separated, optional)</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="kafka openid" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          Extensions{' '}
+                          <span className="text-muted-foreground font-normal">(optional)</span>
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs"
+                          onClick={() => appendExt({ key: '', value: '' })}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add
+                        </Button>
+                      </div>
+                      {extFields.map((ef, idx) => (
+                        <div key={ef.id} className="flex gap-2 items-start">
+                          <FormField
+                            control={form.control}
+                            name={`oauthExtensions.${idx}.key`}
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormControl>
+                                  <Input placeholder="key" {...field} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`oauthExtensions.${idx}.value`}
+                            render={({ field }) => (
+                              <FormItem className="flex-1">
+                                <FormControl>
+                                  <Input placeholder="value" {...field} />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 shrink-0"
+                            onClick={() => removeExt(idx)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        {isClientCreds ? 'Client Secret' : 'Bearer Token'}{' '}
+                        <span className="text-muted-foreground">(stored in keychain)</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
             {form.formState.errors.root && (
               <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
             )}

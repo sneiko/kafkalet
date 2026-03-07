@@ -63,7 +63,7 @@ func buildSASL(cfg profile.SASLConfig, password string) (kgo.Opt, error) {
 				return nil, fmt.Errorf("oauth token fetch: %w", err)
 			}
 		}
-		return kgo.SASL(oauth.Auth{Token: token}.AsMechanism()), nil
+		return kgo.SASL(oauth.Auth{Token: token, Extensions: cfg.OAuthExtensions}.AsMechanism()), nil
 	default:
 		return nil, fmt.Errorf("unsupported SASL mechanism: %q", cfg.Mechanism)
 	}

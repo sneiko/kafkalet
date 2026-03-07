@@ -55,7 +55,8 @@ type SASLConfig struct {
 	Username      string   `json:"username"`                // not used for OAUTHBEARER
 	OAuthTokenURL string   `json:"oauthTokenURL,omitempty"` // token endpoint for client_credentials flow
 	OAuthClientID string   `json:"oauthClientID,omitempty"` // client_id for client_credentials flow
-	OAuthScopes   []string `json:"oauthScopes,omitempty"`   // requested scopes
+	OAuthScopes     []string          `json:"oauthScopes,omitempty"`     // requested scopes
+	OAuthExtensions map[string]string `json:"oauthExtensions,omitempty"` // SASL OAUTHBEARER extensions (e.g. identityPoolId, logicalCluster)
 }
 
 // TLSConfig holds TLS settings. Cert paths point to PEM files on disk.

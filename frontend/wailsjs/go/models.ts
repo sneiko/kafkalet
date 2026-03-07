@@ -464,6 +464,7 @@ export namespace profile {
 	    oauthTokenURL?: string;
 	    oauthClientID?: string;
 	    oauthScopes?: string[];
+	    oauthExtensions?: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new SASLConfig(source);
@@ -476,6 +477,7 @@ export namespace profile {
 	        this.oauthTokenURL = source["oauthTokenURL"];
 	        this.oauthClientID = source["oauthClientID"];
 	        this.oauthScopes = source["oauthScopes"];
+	        this.oauthExtensions = source["oauthExtensions"];
 	    }
 	}
 	export class Broker {

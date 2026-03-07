@@ -67,6 +67,7 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       initialCredOAuthTokenURL: '',
       initialCredOAuthClientId: '',
       initialCredOAuthScopes: '',
+      initialCredOAuthExtensions: [],
     },
   })
 
@@ -90,6 +91,7 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         initialCredOAuthTokenURL: '',
         initialCredOAuthClientId: '',
         initialCredOAuthScopes: '',
+        initialCredOAuthExtensions: [],
       })
       editTest.resetResult()
       addTest.resetResult()
@@ -147,6 +149,9 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       if (!isEdit && values.initialCredName.trim()) {
         const mechanism = values.initialCredMechanism
         const isOAuth = mechanism === 'OAUTHBEARER'
+        const extensions = Object.fromEntries(
+          values.initialCredOAuthExtensions.filter(e => e.key.trim()).map(e => [e.key.trim(), e.value])
+        )
         const newCred = await AddBrokerCredential(profileId, savedBroker.id, {
           id: '',
           name: values.initialCredName.trim(),
@@ -157,6 +162,7 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
                 oauthTokenURL: values.initialCredOAuthTokenURL,
                 oauthClientID: values.initialCredOAuthClientId,
                 oauthScopes: values.initialCredOAuthScopes.split(' ').filter(Boolean),
+                oauthExtensions: extensions,
               }
             : {
                 mechanism,
@@ -164,6 +170,7 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
                 oauthTokenURL: '',
                 oauthClientID: '',
                 oauthScopes: [],
+                oauthExtensions: {},
               },
         } as unknown as profile.NamedCredential) as unknown as NamedCredential
 

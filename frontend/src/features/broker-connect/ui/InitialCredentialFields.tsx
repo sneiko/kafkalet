@@ -1,5 +1,7 @@
-import { type UseFormReturn } from 'react-hook-form'
+import { type UseFormReturn, useFieldArray } from 'react-hook-form'
+import { Plus, X } from 'lucide-react'
 
+import { Button } from '@/shared/ui/button'
 import {
   FormControl,
   FormField,
@@ -28,6 +30,10 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
   const isOAuth = mechanism === 'OAUTHBEARER'
   const oauthTokenURL = form.watch('initialCredOAuthTokenURL')
   const isClientCreds = isOAuth && oauthTokenURL.trim() !== ''
+  const { fields: extFields, append: appendExt, remove: removeExt } = useFieldArray({
+    control: form.control,
+    name: 'initialCredOAuthExtensions',
+  })
 
   return (
     <>
@@ -157,6 +163,59 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
                   </FormItem>
                 )}
               />
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Extensions{' '}
+                    <span className="text-muted-foreground font-normal">(optional)</span>
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => appendExt({ key: '', value: '' })}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    Add
+                  </Button>
+                </div>
+                {extFields.map((ef, idx) => (
+                  <div key={ef.id} className="flex gap-2 items-start">
+                    <FormField
+                      control={form.control}
+                      name={`initialCredOAuthExtensions.${idx}.key`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input placeholder="key" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name={`initialCredOAuthExtensions.${idx}.value`}
+                      render={({ field }) => (
+                        <FormItem className="flex-1">
+                          <FormControl>
+                            <Input placeholder="value" {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 shrink-0"
+                      onClick={() => removeExt(idx)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
             </>
           )}
           <FormField

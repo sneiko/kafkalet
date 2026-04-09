@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Loader2, Trash2, Plus, UserCheck } from 'lucide-react'
+import { Loader2, Trash2, Plus, UserCheck, KeyRound, Check, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import {
@@ -35,6 +35,7 @@ import {
   AddBrokerCredential,
   DeleteBrokerCredential,
   SetNamedCredentialPassword,
+  SwitchBrokerCredential,
   TestConnectionDirect,
   type profile,
 } from '@shared/api'
@@ -52,8 +53,29 @@ interface UsersTabProps {
 export function UsersTab({ profileId, broker, credentials, activeCredentialID }: UsersTabProps) {
   const [addingCred, setAddingCred] = useState(false)
   const [credDeleteTarget, setCredDeleteTarget] = useState<NamedCredential | null>(null)
+  const [updatingCredId, setUpdatingCredId] = useState<string | null>(null)
+  const [updatePassword, setUpdatePassword] = useState('')
+  const [updateSaving, setUpdateSaving] = useState(false)
   const { upsertProfile, profiles } = useProfileStore()
   const credTest = useConnectionTest()
+
+  const handleUpdatePassword = async (credId: string) => {
+    if (!updatePassword) return
+    setUpdateSaving(true)
+    try {
+      await SetNamedCredentialPassword(profileId, broker.id, credId, updatePassword)
+      // Evict pooled client so next operation uses the new token
+      if (activeCredentialID === credId) {
+        await SwitchBrokerCredential(profileId, broker.id, credId)
+      }
+      setUpdatingCredId(null)
+      setUpdatePassword('')
+    } catch {
+      // keep form open on error
+    } finally {
+      setUpdateSaving(false)
+    }
+  }
 
   const credForm = useForm<CredFormValues>({
     resolver: zodResolver(credSchema),
@@ -145,27 +167,64 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
           <p className="text-xs text-muted-foreground">No named credentials yet.</p>
         )}
         {credentials.map((cred) => (
-          <div
-            key={cred.id}
-            className="flex items-center justify-between rounded-md border border-border px-3 py-2"
-          >
-            <div className="min-w-0">
-              <p className="text-sm font-medium truncate">{cred.name}</p>
-              <p className="text-xs text-muted-foreground">{cred.sasl.mechanism} {cred.sasl.username && `· ${cred.sasl.username}`}</p>
+          <div key={cred.id} className="space-y-2">
+            <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{cred.name}</p>
+                <p className="text-xs text-muted-foreground">{cred.sasl.mechanism} {cred.sasl.username && `· ${cred.sasl.username}`}</p>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                {activeCredentialID === cred.id && (
+                  <UserCheck className="h-3.5 w-3.5 text-primary" aria-label="Active" />
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => { setUpdatingCredId(updatingCredId === cred.id ? null : cred.id); setUpdatePassword('') }}
+                  aria-label="Update password"
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-destructive hover:text-destructive"
+                  onClick={() => setCredDeleteTarget(cred)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {activeCredentialID === cred.id && (
-                <UserCheck className="h-3.5 w-3.5 text-primary" aria-label="Active" />
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive"
-                onClick={() => setCredDeleteTarget(cred)}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </div>
+            {updatingCredId === cred.id && (
+              <div className="flex items-center gap-2 px-3">
+                <Input
+                  type="password"
+                  placeholder={cred.sasl.mechanism === 'OAUTHBEARER' ? 'New token' : 'New password'}
+                  className="h-7 text-xs flex-1"
+                  value={updatePassword}
+                  onChange={(e) => setUpdatePassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleUpdatePassword(cred.id)}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={updateSaving || !updatePassword}
+                  onClick={() => handleUpdatePassword(cred.id)}
+                >
+                  {updateSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => { setUpdatingCredId(null); setUpdatePassword('') }}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            )}
           </div>
         ))}
 

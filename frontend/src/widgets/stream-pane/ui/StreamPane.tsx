@@ -124,7 +124,7 @@ function StreamPaneInner() {
   const hasFilter = Boolean(filter.key || filter.value)
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-1 min-h-0 flex-col">
       {/* Toolbar */}
       <div className="flex items-center gap-2 border-b border-border px-3 py-1.5 text-xs shrink-0">
         <span className="font-mono text-foreground/80 font-medium">{session.topic}</span>

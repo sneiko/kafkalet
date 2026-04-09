@@ -77,7 +77,7 @@ export function GroupLagPanel() {
   }
 
   return (
-    <div className="border-t border-border">
+    <div className="border-t border-border shrink-0">
       <Separator />
       <div className="flex items-center gap-3 px-3 py-2 text-xs">
         <Tooltip>

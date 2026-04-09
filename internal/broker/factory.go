@@ -1,6 +1,7 @@
 package broker
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -55,15 +56,20 @@ func buildSASL(cfg profile.SASLConfig, password string) (kgo.Opt, error) {
 	case "SCRAM-SHA-512":
 		return kgo.SASL(scram.Auth{User: cfg.Username, Pass: password}.AsSha512Mechanism()), nil
 	case "OAUTHBEARER":
-		token := password
 		if cfg.OAuthTokenURL != "" {
-			var err error
-			token, err = fetchClientCredentialsToken(cfg.OAuthTokenURL, cfg.OAuthClientID, password, cfg.OAuthScopes)
-			if err != nil {
-				return nil, fmt.Errorf("oauth token fetch: %w", err)
-			}
+			// Client credentials flow: fetch a fresh token on every auth attempt
+			// so reconnections use a valid (non-expired) access token.
+			mech := oauth.Oauth(func(ctx context.Context) (oauth.Auth, error) {
+				token, err := fetchClientCredentialsToken(cfg.OAuthTokenURL, cfg.OAuthClientID, password, cfg.OAuthScopes)
+				if err != nil {
+					return oauth.Auth{}, fmt.Errorf("oauth token refresh: %w", err)
+				}
+				return oauth.Auth{Token: token, Extensions: cfg.OAuthExtensions}, nil
+			})
+			return kgo.SASL(mech), nil
 		}
-		return kgo.SASL(oauth.Auth{Token: token, Extensions: cfg.OAuthExtensions}.AsMechanism()), nil
+		// Static bearer token mode: token is the password from keychain.
+		return kgo.SASL(oauth.Auth{Token: password, Extensions: cfg.OAuthExtensions}.AsMechanism()), nil
 	default:
 		return nil, fmt.Errorf("unsupported SASL mechanism: %q", cfg.Mechanism)
 	}

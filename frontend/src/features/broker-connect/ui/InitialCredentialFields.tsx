@@ -27,6 +27,7 @@ interface InitialCredentialFieldsProps {
 
 export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) {
   const mechanism = form.watch('initialCredMechanism')
+  const isNone = mechanism === 'NONE'
   const isOAuth = mechanism === 'OAUTHBEARER'
   const oauthTokenURL = form.watch('initialCredOAuthTokenURL')
   const isClientCreds = isOAuth && oauthTokenURL.trim() !== ''
@@ -42,19 +43,21 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
         User
       </p>
 
-      <FormField
-        control={form.control}
-        name="initialCredName"
-        render={({ field }) => (
-          <FormItem>
-            <FormLabel>Name</FormLabel>
-            <FormControl>
-              <Input placeholder="admin" {...field} />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
+      {!isNone && (
+        <FormField
+          control={form.control}
+          name="initialCredName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Name</FormLabel>
+              <FormControl>
+                <Input placeholder="admin" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      )}
 
       <FormField
         control={form.control}
@@ -69,6 +72,7 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
+                <SelectItem value="NONE">None (no auth)</SelectItem>
                 <SelectItem value="PLAIN">PLAIN</SelectItem>
                 <SelectItem value="SCRAM-SHA-256">SCRAM-SHA-256</SelectItem>
                 <SelectItem value="SCRAM-SHA-512">SCRAM-SHA-512</SelectItem>
@@ -80,7 +84,7 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
         )}
       />
 
-      {!isOAuth && (
+      {!isOAuth && !isNone && (
         <>
           <FormField
             control={form.control}

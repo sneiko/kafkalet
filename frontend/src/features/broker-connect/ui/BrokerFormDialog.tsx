@@ -61,7 +61,7 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       srUsername: broker?.schemaRegistry?.username ?? '',
       srPassword: '',
       initialCredName: '',
-      initialCredMechanism: 'PLAIN',
+      initialCredMechanism: 'NONE',
       initialCredUsername: '',
       initialCredPassword: '',
       initialCredOAuthTokenURL: '',
@@ -85,7 +85,7 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         srUsername: broker?.schemaRegistry?.username ?? '',
         srPassword: '',
         initialCredName: '',
-        initialCredMechanism: 'PLAIN',
+        initialCredMechanism: 'NONE',
         initialCredUsername: '',
         initialCredPassword: '',
         initialCredOAuthTokenURL: '',
@@ -145,8 +145,8 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         await SetSchemaRegistryPassword(profileId, savedBroker.id, values.srPassword)
       }
 
-      // Add initial credential for new brokers
-      if (!isEdit && values.initialCredName.trim()) {
+      // Add initial credential for new brokers (skip if no auth)
+      if (!isEdit && values.initialCredMechanism !== 'NONE' && values.initialCredName.trim()) {
         const mechanism = values.initialCredMechanism
         const isOAuth = mechanism === 'OAUTHBEARER'
         const extensions = Object.fromEntries(

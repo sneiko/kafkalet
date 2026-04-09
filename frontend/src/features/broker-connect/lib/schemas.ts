@@ -26,6 +26,7 @@ export const baseSchema = z.object({
 export function buildSchema(isEdit: boolean) {
   if (isEdit) return baseSchema
   return baseSchema.superRefine((data, ctx) => {
+    if (data.initialCredMechanism === 'NONE') return
     if (!data.initialCredName.trim()) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredName'] })
     }
@@ -73,8 +74,12 @@ export function buildTestParams(values: {
 }) {
   const addresses = values.addresses.split(',').map((s) => s.trim()).filter(Boolean)
   const mechanism = values.initialCredMechanism
-  const isOAuth = mechanism === 'OAUTHBEARER'
   const tls = { enabled: values.tlsEnabled, insecureSkipVerify: values.tlsInsecureSkipVerify, caCertPath: values.tlsCaCertPath, clientCertPath: values.tlsClientCertPath, clientKeyPath: values.tlsClientKeyPath } as unknown as profile.TLSConfig
+  if (mechanism === 'NONE') {
+    const sasl = { mechanism: '', username: '', oauthTokenURL: '', oauthClientID: '', oauthScopes: [] } as unknown as profile.SASLConfig
+    return { addresses, tls, sasl, password: '' }
+  }
+  const isOAuth = mechanism === 'OAUTHBEARER'
   const sasl = isOAuth
     ? { mechanism: 'OAUTHBEARER', username: '', oauthTokenURL: values.initialCredOAuthTokenURL, oauthClientID: values.initialCredOAuthClientId, oauthScopes: values.initialCredOAuthScopes.split(' ').filter(Boolean), oauthExtensions: Object.fromEntries(values.initialCredOAuthExtensions.filter(e => e.key.trim()).map(e => [e.key.trim(), e.value])) } as unknown as profile.SASLConfig
     : { mechanism, username: values.initialCredUsername, oauthTokenURL: '', oauthClientID: '', oauthScopes: [] } as unknown as profile.SASLConfig

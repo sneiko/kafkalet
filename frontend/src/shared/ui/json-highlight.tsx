@@ -6,7 +6,8 @@ interface Token {
 function tokenize(code: string): Token[] {
   const tokens: Token[] = []
   // Matches: quoted strings (optionally followed by colon = key), numbers, literals, punctuation
-  const regex = /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|true|false|null|[{}[\],]/g
+  const regex =
+    /("(?:[^"\\]|\\.)*")(\s*:)?|(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)|true|false|null|[{}[\],]/g
   let lastIndex = 0
   let match: RegExpExecArray | null
 
@@ -66,17 +67,41 @@ export function JsonHighlight({ code }: { code: string }) {
       {tokens.map((token, i) => {
         switch (token.type) {
           case 'key':
-            return <span key={i} className="text-blue-400 dark:text-blue-300">{token.text}</span>
+            return (
+              <span key={i} className="text-blue-400 dark:text-blue-300">
+                {token.text}
+              </span>
+            )
           case 'string':
-            return <span key={i} className="text-green-500 dark:text-green-400">{token.text}</span>
+            return (
+              <span key={i} className="text-green-500 dark:text-green-400">
+                {token.text}
+              </span>
+            )
           case 'number':
-            return <span key={i} className="text-orange-400">{token.text}</span>
+            return (
+              <span key={i} className="text-orange-400">
+                {token.text}
+              </span>
+            )
           case 'boolean':
-            return <span key={i} className="text-purple-400">{token.text}</span>
+            return (
+              <span key={i} className="text-purple-400">
+                {token.text}
+              </span>
+            )
           case 'null':
-            return <span key={i} className="text-purple-400">{token.text}</span>
+            return (
+              <span key={i} className="text-purple-400">
+                {token.text}
+              </span>
+            )
           case 'punctuation':
-            return <span key={i} className="text-muted-foreground">{token.text}</span>
+            return (
+              <span key={i} className="text-muted-foreground">
+                {token.text}
+              </span>
+            )
           default:
             return <span key={i}>{token.text}</span>
         }

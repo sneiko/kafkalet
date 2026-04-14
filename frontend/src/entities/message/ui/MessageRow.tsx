@@ -13,7 +13,12 @@ interface Props {
 const VALUE_MAX = 100
 const GRID_COLS = '104px 148px 168px 1fr'
 
-export const MessageRow = memo(function MessageRow({ message, style, decodedValue, onClick }: Props) {
+export const MessageRow = memo(function MessageRow({
+  message,
+  style,
+  decodedValue,
+  onClick,
+}: Props) {
   const raw = decodedValue ?? message.value
   const value = raw.length > VALUE_MAX ? raw.slice(0, VALUE_MAX) + '…' : raw
 
@@ -33,9 +38,11 @@ export const MessageRow = memo(function MessageRow({ message, style, decodedValu
         {formatRelativeTime(message.timestamp)}
       </span>
       <span className="font-mono truncate pr-2">
-        {message.key
-          ? <span className="bg-muted/50 rounded px-1 text-foreground/70">{message.key}</span>
-          : <span className="text-muted-foreground/40">—</span>}
+        {message.key ? (
+          <span className="bg-muted/50 rounded px-1 text-foreground/70">{message.key}</span>
+        ) : (
+          <span className="text-muted-foreground/40">—</span>
+        )}
       </span>
       <span className="font-mono text-foreground/85 truncate">
         {value || <span className="text-muted-foreground/50 italic">empty</span>}

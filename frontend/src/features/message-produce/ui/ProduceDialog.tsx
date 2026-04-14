@@ -4,13 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Plus, Trash2, Loader2 } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
@@ -88,7 +82,10 @@ export function ProduceDialog({ profileId, brokerId, topic, open, onOpenChange }
   }
 
   const handleOpenChange = (v: boolean) => {
-    if (!v) { reset(); setResult(null) }
+    if (!v) {
+      reset()
+      setResult(null)
+    }
     onOpenChange(v)
   }
 
@@ -140,9 +137,7 @@ export function ProduceDialog({ profileId, brokerId, topic, open, onOpenChange }
               placeholder='{"key": "value"}'
               {...register('value')}
             />
-            {errors.value && (
-              <p className="text-xs text-destructive">{errors.value.message}</p>
-            )}
+            {errors.value && <p className="text-xs text-destructive">{errors.value.message}</p>}
             {watchedValue && isValidJson(watchedValue) && (
               <pre className="bg-muted/30 rounded p-2 font-mono text-xs overflow-auto max-h-40 whitespace-pre-wrap break-all">
                 <JsonHighlight code={prettyJson(watchedValue)} />

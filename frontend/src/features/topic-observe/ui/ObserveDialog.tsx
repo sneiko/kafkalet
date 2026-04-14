@@ -2,13 +2,7 @@ import { useState } from 'react'
 import { Loader2, Radio } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Label } from '@/shared/ui/label'
 import { Input } from '@/shared/ui/input'
 
@@ -110,8 +104,16 @@ export function ObserveDialog({
               {(
                 [
                   { value: 'latest', label: 'Latest', desc: 'From now (new messages only)' },
-                  { value: 'earliest', label: 'From beginning', desc: 'Read all messages from offset 0' },
-                  { value: 'timestamp', label: 'From date/time', desc: 'Seek to a specific point in time' },
+                  {
+                    value: 'earliest',
+                    label: 'From beginning',
+                    desc: 'Read all messages from offset 0',
+                  },
+                  {
+                    value: 'timestamp',
+                    label: 'From date/time',
+                    desc: 'Seek to a specific point in time',
+                  },
                 ] as const
               ).map(({ value: opt, label, desc }) => (
                 <label key={opt} className="flex items-start gap-1.5 cursor-pointer">

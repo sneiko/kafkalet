@@ -2,21 +2,9 @@ import { type UseFormReturn, useFieldArray } from 'react-hook-form'
 import { Plus, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/shared/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form'
 import { Input } from '@/shared/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Separator } from '@/shared/ui/separator'
 
 import { type FormValues } from '../lib/schemas'
@@ -31,7 +19,11 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
   const isOAuth = mechanism === 'OAUTHBEARER'
   const oauthTokenURL = form.watch('initialCredOAuthTokenURL')
   const isClientCreds = isOAuth && oauthTokenURL.trim() !== ''
-  const { fields: extFields, append: appendExt, remove: removeExt } = useFieldArray({
+  const {
+    fields: extFields,
+    append: appendExt,
+    remove: removeExt,
+  } = useFieldArray({
     control: form.control,
     name: 'initialCredOAuthExtensions',
   })
@@ -39,9 +31,7 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
   return (
     <>
       <Separator />
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        User
-      </p>
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">User</p>
 
       {!isNone && (
         <FormField
@@ -105,8 +95,7 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Password{' '}
-                  <span className="text-muted-foreground">(stored in keychain)</span>
+                  Password <span className="text-muted-foreground">(stored in keychain)</span>
                 </FormLabel>
                 <FormControl>
                   <Input type="password" {...field} />
@@ -127,7 +116,9 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
               <FormItem>
                 <FormLabel>
                   Token URL{' '}
-                  <span className="text-muted-foreground">(optional — leave blank for static token)</span>
+                  <span className="text-muted-foreground">
+                    (optional — leave blank for static token)
+                  </span>
                 </FormLabel>
                 <FormControl>
                   <Input placeholder="https://auth.example.com/oauth/token" {...field} />
@@ -170,8 +161,7 @@ export function InitialCredentialFields({ form }: InitialCredentialFieldsProps) 
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">
-                    Extensions{' '}
-                    <span className="text-muted-foreground font-normal">(optional)</span>
+                    Extensions <span className="text-muted-foreground font-normal">(optional)</span>
                   </span>
                   <Button
                     type="button"

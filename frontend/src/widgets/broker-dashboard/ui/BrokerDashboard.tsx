@@ -32,7 +32,7 @@ export function BrokerDashboard({ profileId, brokerId, brokerName }: Props) {
     await SwitchBrokerCredential(profileId, brokerId, credentialId)
     if (profile) {
       const updatedBrokers = profile.brokers.map((b) =>
-        b.id === brokerId ? { ...b, activeCredentialID: credentialId } : b
+        b.id === brokerId ? { ...b, activeCredentialID: credentialId } : b,
       )
       upsertProfile({ ...profile, brokers: updatedBrokers })
     }
@@ -67,7 +67,9 @@ export function BrokerDashboard({ profileId, brokerId, brokerName }: Props) {
               <PopoverTrigger asChild>
                 <button className="flex items-center gap-1 px-1.5 py-0.5 rounded text-xs text-muted-foreground hover:bg-accent/60 hover:text-foreground transition-colors">
                   <UserCog className="h-3.5 w-3.5" />
-                  <span className="truncate max-w-[120px]">{activeCredential?.name ?? credentials[0].name}</span>
+                  <span className="truncate max-w-[120px]">
+                    {activeCredential?.name ?? credentials[0].name}
+                  </span>
                   <ChevronDown className="h-3 w-3" />
                 </button>
               </PopoverTrigger>
@@ -102,9 +104,15 @@ export function BrokerDashboard({ profileId, brokerId, brokerName }: Props) {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
         <TabsList className="mx-3 mt-2 self-start h-8">
-          <TabsTrigger value="topics" className="text-xs px-3 py-1">Topics</TabsTrigger>
-          <TabsTrigger value="consumer-groups" className="text-xs px-3 py-1">Consumer Groups</TabsTrigger>
-          <TabsTrigger value="sessions" className="text-xs px-3 py-1">Sessions</TabsTrigger>
+          <TabsTrigger value="topics" className="text-xs px-3 py-1">
+            Topics
+          </TabsTrigger>
+          <TabsTrigger value="consumer-groups" className="text-xs px-3 py-1">
+            Consumer Groups
+          </TabsTrigger>
+          <TabsTrigger value="sessions" className="text-xs px-3 py-1">
+            Sessions
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="topics" className="flex-1 min-h-0 mt-0">
@@ -117,11 +125,7 @@ export function BrokerDashboard({ profileId, brokerId, brokerName }: Props) {
         </TabsContent>
 
         <TabsContent value="consumer-groups" className="flex-1 min-h-0 mt-0">
-          <ConsumerGroupsTab
-            key={`cg-${refreshKey}`}
-            profileId={profileId}
-            brokerId={brokerId}
-          />
+          <ConsumerGroupsTab key={`cg-${refreshKey}`} profileId={profileId} brokerId={brokerId} />
         </TabsContent>
 
         <TabsContent value="sessions" className="flex-1 min-h-0 mt-0">

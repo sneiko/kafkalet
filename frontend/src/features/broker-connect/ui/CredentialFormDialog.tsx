@@ -5,29 +5,10 @@ import { z } from 'zod'
 import { Loader2, Plus, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/shared/ui/form'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form'
 import { Input } from '@/shared/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
 import {
   AddBrokerCredential,
@@ -89,7 +70,11 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
   const isOAuth = mechanism === 'OAUTHBEARER'
   const oauthTokenURL = form.watch('oauthTokenURL')
   const isClientCreds = isOAuth && oauthTokenURL.trim() !== ''
-  const { fields: extFields, append: appendExt, remove: removeExt } = useFieldArray({
+  const {
+    fields: extFields,
+    append: appendExt,
+    remove: removeExt,
+  } = useFieldArray({
     control: form.control,
     name: 'oauthExtensions',
   })
@@ -100,25 +85,25 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
 
   const buildSaslConfig = (values: FormValues) => {
     const extensions = Object.fromEntries(
-      values.oauthExtensions.filter(e => e.key.trim()).map(e => [e.key.trim(), e.value])
+      values.oauthExtensions.filter((e) => e.key.trim()).map((e) => [e.key.trim(), e.value]),
     )
     return values.mechanism === 'OAUTHBEARER'
-      ? {
+      ? ({
           mechanism: 'OAUTHBEARER',
           username: '',
           oauthTokenURL: values.oauthTokenURL,
           oauthClientID: values.oauthClientId,
           oauthScopes: values.oauthScopes.split(' ').filter(Boolean),
           oauthExtensions: extensions,
-        } as unknown as profile.SASLConfig
-      : {
+        } as unknown as profile.SASLConfig)
+      : ({
           mechanism: values.mechanism,
           username: values.username,
           oauthTokenURL: '',
           oauthClientID: '',
           oauthScopes: [],
           oauthExtensions: {},
-        } as unknown as profile.SASLConfig
+        } as unknown as profile.SASLConfig)
   }
 
   const handleTest = async () => {
@@ -131,7 +116,7 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
         currentBroker.addresses,
         currentBroker.tls as unknown as profile.TLSConfig,
         buildSaslConfig(values),
-        values.password
+        values.password,
       )
       setTestResult('Connection successful')
     } catch (err) {
@@ -154,7 +139,7 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
         currentBroker.addresses,
         currentBroker.tls as unknown as profile.TLSConfig,
         sasl,
-        values.password
+        values.password,
       )
     } catch (err) {
       setTestResult(String(err))
@@ -164,11 +149,11 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
     setAutoTesting(false)
 
     try {
-      const newCred = await AddBrokerCredential(profileId, brokerId, {
+      const newCred = (await AddBrokerCredential(profileId, brokerId, {
         id: '',
         name: values.name,
         sasl,
-      } as unknown as profile.NamedCredential) as unknown as NamedCredential
+      } as unknown as profile.NamedCredential)) as unknown as NamedCredential
 
       if (values.password) {
         await SetNamedCredentialPassword(profileId, brokerId, newCred.id, values.password)
@@ -177,9 +162,7 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
       const currentProfile = profiles.find((p) => p.id === profileId)
       if (currentProfile) {
         const updatedBrokers = currentProfile.brokers.map((b) =>
-          b.id === brokerId
-            ? { ...b, credentials: [...(b.credentials ?? []), newCred] }
-            : b
+          b.id === brokerId ? { ...b, credentials: [...(b.credentials ?? []), newCred] } : b,
         )
         upsertProfile({ ...currentProfile, brokers: updatedBrokers })
       }
@@ -254,7 +237,9 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password <span className="text-muted-foreground">(stored in keychain)</span></FormLabel>
+                      <FormLabel>
+                        Password <span className="text-muted-foreground">(stored in keychain)</span>
+                      </FormLabel>
                       <FormControl>
                         <Input type="password" {...field} />
                       </FormControl>
@@ -273,7 +258,9 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
                     <FormItem>
                       <FormLabel>
                         Token URL{' '}
-                        <span className="text-muted-foreground">(optional — leave blank for static token)</span>
+                        <span className="text-muted-foreground">
+                          (optional — leave blank for static token)
+                        </span>
                       </FormLabel>
                       <FormControl>
                         <Input placeholder="https://auth.example.com/oauth/token" {...field} />
@@ -304,7 +291,9 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
                         <FormItem>
                           <FormLabel>
                             Scopes{' '}
-                            <span className="text-muted-foreground">(space-separated, optional)</span>
+                            <span className="text-muted-foreground">
+                              (space-separated, optional)
+                            </span>
                           </FormLabel>
                           <FormControl>
                             <Input placeholder="kafka openid" {...field} />
@@ -390,17 +379,31 @@ export function CredentialFormDialog({ profileId, brokerId, open, onOpenChange }
               <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
             )}
             {testResult && (
-              <p className={testResult === 'Connection successful' ? 'text-sm text-green-500' : 'text-sm text-destructive'}>
+              <p
+                className={
+                  testResult === 'Connection successful'
+                    ? 'text-sm text-green-500'
+                    : 'text-sm text-destructive'
+                }
+              >
                 {testResult}
               </p>
             )}
             <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={handleTest} disabled={testing || !currentBroker}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleTest}
+                disabled={testing || !currentBroker}
+              >
                 {testing && <Loader2 className="animate-spin" />}
                 Test Connection
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting || autoTesting}>
-                {(form.formState.isSubmitting || autoTesting) && <Loader2 className="animate-spin" />}
+                {(form.formState.isSubmitting || autoTesting) && (
+                  <Loader2 className="animate-spin" />
+                )}
                 {autoTesting ? 'Testing...' : 'Add'}
               </Button>
             </DialogFooter>

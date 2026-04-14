@@ -29,8 +29,9 @@ type Pool struct {
 }
 
 // NewPool creates a Pool and starts the background reaper.
-func NewPool(ttl time.Duration, factory ClientFactory) *Pool {
-	ctx, cancel := context.WithCancel(context.Background())
+// The parent context controls the reaper goroutine lifecycle.
+func NewPool(parent context.Context, ttl time.Duration, factory ClientFactory) *Pool {
+	ctx, cancel := context.WithCancel(parent)
 	p := &Pool{
 		entries: make(map[string]*poolEntry),
 		factory: factory,

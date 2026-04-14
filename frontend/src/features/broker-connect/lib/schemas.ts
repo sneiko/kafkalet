@@ -33,14 +33,26 @@ export function buildSchema(isEdit: boolean) {
     const isOAuth = data.initialCredMechanism === 'OAUTHBEARER'
     if (!isOAuth) {
       if (!data.initialCredUsername.trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredUsername'] })
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Required',
+          path: ['initialCredUsername'],
+        })
       }
       if (!data.initialCredPassword) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredPassword'] })
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Required',
+          path: ['initialCredPassword'],
+        })
       }
     } else {
       if (!data.initialCredPassword) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredPassword'] })
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Required',
+          path: ['initialCredPassword'],
+        })
       }
     }
   })
@@ -72,16 +84,48 @@ export function buildTestParams(values: {
   initialCredOAuthScopes: string
   initialCredOAuthExtensions: { key: string; value: string }[]
 }) {
-  const addresses = values.addresses.split(',').map((s) => s.trim()).filter(Boolean)
+  const addresses = values.addresses
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
   const mechanism = values.initialCredMechanism
-  const tls = { enabled: values.tlsEnabled, insecureSkipVerify: values.tlsInsecureSkipVerify, caCertPath: values.tlsCaCertPath, clientCertPath: values.tlsClientCertPath, clientKeyPath: values.tlsClientKeyPath } as unknown as profile.TLSConfig
+  const tls = {
+    enabled: values.tlsEnabled,
+    insecureSkipVerify: values.tlsInsecureSkipVerify,
+    caCertPath: values.tlsCaCertPath,
+    clientCertPath: values.tlsClientCertPath,
+    clientKeyPath: values.tlsClientKeyPath,
+  } as unknown as profile.TLSConfig
   if (mechanism === 'NONE') {
-    const sasl = { mechanism: '', username: '', oauthTokenURL: '', oauthClientID: '', oauthScopes: [] } as unknown as profile.SASLConfig
+    const sasl = {
+      mechanism: '',
+      username: '',
+      oauthTokenURL: '',
+      oauthClientID: '',
+      oauthScopes: [],
+    } as unknown as profile.SASLConfig
     return { addresses, tls, sasl, password: '' }
   }
   const isOAuth = mechanism === 'OAUTHBEARER'
   const sasl = isOAuth
-    ? { mechanism: 'OAUTHBEARER', username: '', oauthTokenURL: values.initialCredOAuthTokenURL, oauthClientID: values.initialCredOAuthClientId, oauthScopes: values.initialCredOAuthScopes.split(' ').filter(Boolean), oauthExtensions: Object.fromEntries(values.initialCredOAuthExtensions.filter(e => e.key.trim()).map(e => [e.key.trim(), e.value])) } as unknown as profile.SASLConfig
-    : { mechanism, username: values.initialCredUsername, oauthTokenURL: '', oauthClientID: '', oauthScopes: [] } as unknown as profile.SASLConfig
+    ? ({
+        mechanism: 'OAUTHBEARER',
+        username: '',
+        oauthTokenURL: values.initialCredOAuthTokenURL,
+        oauthClientID: values.initialCredOAuthClientId,
+        oauthScopes: values.initialCredOAuthScopes.split(' ').filter(Boolean),
+        oauthExtensions: Object.fromEntries(
+          values.initialCredOAuthExtensions
+            .filter((e) => e.key.trim())
+            .map((e) => [e.key.trim(), e.value]),
+        ),
+      } as unknown as profile.SASLConfig)
+    : ({
+        mechanism,
+        username: values.initialCredUsername,
+        oauthTokenURL: '',
+        oauthClientID: '',
+        oauthScopes: [],
+      } as unknown as profile.SASLConfig)
   return { addresses, tls, sasl, password: values.initialCredPassword }
 }

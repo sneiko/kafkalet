@@ -23,7 +23,18 @@ interface Props {
   onTogglePin?: (topic: Topic) => void
 }
 
-export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProduce, onSearch, onInfo, onDelete, onTogglePin }: Props) {
+export function TopicRow({
+  topic,
+  focused,
+  pinned,
+  onObserve,
+  onConsume,
+  onProduce,
+  onSearch,
+  onInfo,
+  onDelete,
+  onTogglePin,
+}: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -63,9 +74,7 @@ export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProdu
         </button>
       )}
       <span className="flex-1 truncate text-foreground/90">{topic.name}</span>
-      <span className="text-muted-foreground/60 shrink-0 tabular-nums">
-        {topic.partitions}p
-      </span>
+      <span className="text-muted-foreground/60 shrink-0 tabular-nums">{topic.partitions}p</span>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

@@ -97,11 +97,7 @@ export function PluginManagerPanel() {
         Add Plugin
       </Button>
 
-      <PluginEditorDialog
-        plugin={editPlugin}
-        open={editorOpen}
-        onOpenChange={setEditorOpen}
-      />
+      <PluginEditorDialog plugin={editPlugin} open={editorOpen} onOpenChange={setEditorOpen} />
 
       <AlertDialog open={Boolean(deletePlugin)} onOpenChange={(v) => !v && setDeletePlugin(null)}>
         <AlertDialogContent>

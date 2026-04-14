@@ -3,13 +3,7 @@ import { FolderOpen, X } from 'lucide-react'
 
 import { SelectCertificateFile } from '@shared/api'
 import { Button } from '@/shared/ui/button'
-import {
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/shared/ui/form'
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form'
 import { Input } from '@/shared/ui/input'
 import { Separator } from '@/shared/ui/separator'
 
@@ -51,9 +45,7 @@ export function ConnectionFields({ form }: ConnectionFieldsProps) {
       />
 
       <Separator />
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        TLS
-      </p>
+      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">TLS</p>
 
       <FormField
         control={form.control}
@@ -98,7 +90,8 @@ export function ConnectionFields({ form }: ConnectionFieldsProps) {
           />
           {form.watch('tlsInsecureSkipVerify') && (
             <p className="text-xs text-amber-500">
-              Warning: Disabling certificate verification is insecure and should only be used for development.
+              Warning: Disabling certificate verification is insecure and should only be used for
+              development.
             </p>
           )}
         </div>
@@ -115,8 +108,7 @@ export function ConnectionFields({ form }: ConnectionFieldsProps) {
         render={({ field }) => (
           <FormItem>
             <FormLabel>
-              URL{' '}
-              <span className="text-muted-foreground">(optional — enables Avro decoding)</span>
+              URL <span className="text-muted-foreground">(optional — enables Avro decoding)</span>
             </FormLabel>
             <FormControl>
               <Input placeholder="http://localhost:8081" {...field} />
@@ -133,7 +125,9 @@ export function ConnectionFields({ form }: ConnectionFieldsProps) {
             name="srUsername"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Username <span className="text-muted-foreground">(optional)</span></FormLabel>
+                <FormLabel>
+                  Username <span className="text-muted-foreground">(optional)</span>
+                </FormLabel>
                 <FormControl>
                   <Input {...field} />
                 </FormControl>
@@ -147,8 +141,7 @@ export function ConnectionFields({ form }: ConnectionFieldsProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>
-                  Password{' '}
-                  <span className="text-muted-foreground">(stored in keychain)</span>
+                  Password <span className="text-muted-foreground">(stored in keychain)</span>
                 </FormLabel>
                 <FormControl>
                   <Input type="password" placeholder="leave blank to keep existing" {...field} />

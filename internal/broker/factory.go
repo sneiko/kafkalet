@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"github.com/twmb/franz-go/pkg/sasl/oauth"
@@ -87,7 +88,8 @@ func fetchClientCredentialsToken(tokenURL, clientID, clientSecret string, scopes
 		vals.Set("scope", strings.Join(scopes, " "))
 	}
 
-	resp, err := http.PostForm(tokenURL, vals) //nolint:noctx // short-lived auth call
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.PostForm(tokenURL, vals)
 	if err != nil {
 		return "", err
 	}

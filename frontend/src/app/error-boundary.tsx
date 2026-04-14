@@ -1,11 +1,10 @@
 import React from 'react'
 
-interface State { error: Error | null }
+interface State {
+  error: Error | null
+}
 
-export class ErrorBoundary extends React.Component<
-  { children: React.ReactNode },
-  State
-> {
+export class ErrorBoundary extends React.Component<{ children: React.ReactNode }, State> {
   state: State = { error: null }
 
   static getDerivedStateFromError(error: Error): State {

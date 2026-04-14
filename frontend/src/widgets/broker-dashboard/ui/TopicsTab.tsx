@@ -1,19 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { RefreshCw, Loader2, Plus, ChevronRight, ChevronDown, FolderOpen, Search, Star } from 'lucide-react'
+import { RefreshCw, Loader2, Plus, ChevronRight, ChevronDown, FolderOpen, Star } from 'lucide-react'
 import { toast } from 'sonner'
 
-import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 import { IconButton } from '@/shared/ui/icon-button'
 import { Input } from '@/shared/ui/input'
-import { Checkbox } from '@/shared/ui/checkbox'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/shared/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,14 +23,25 @@ import {
   AlertDialogTitle,
 } from '@/shared/ui/alert-dialog'
 import { TopicRow, type Topic } from '@entities/topic'
-import { useProfileStore, type TopicGroup } from '@entities/profile'
+import { useProfileStore } from '@entities/profile'
 import { ObserveDialog } from '@features/topic-observe'
 import { ConsumeDialog } from '@features/topic-consume'
 import { ProduceDialog } from '@features/message-produce'
 import { TopicInfoDialog } from '@features/topic-info'
 import { CreateTopicDialog } from '@features/topic-create'
 import { SearchDialog } from '@features/topic-search'
-import { ListTopics, DeleteTopic, SaveTopicGroup, DeleteTopicGroup, ListProfiles, InvalidateTopicsCache, PinTopic, UnpinTopic } from '@shared/api'
+import {
+  ListTopics,
+  DeleteTopic,
+  SaveTopicGroup,
+  DeleteTopicGroup,
+  ListProfiles,
+  InvalidateTopicsCache,
+  PinTopic,
+  UnpinTopic,
+  profile as profileModels,
+} from '@shared/api'
+import { TopicFilterBar, useTopicFilter } from './TopicFilterBar'
 
 interface TopicTarget {
   profileId: string
@@ -57,9 +60,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const { profiles } = useProfileStore()
   const [topics, setTopics] = useState<Topic[]>([])
   const [loading, setLoading] = useState(false)
-  const [search, setSearch] = useState('')
-  const [regexEnabled, setRegexEnabled] = useState(false)
-  const [minPartitions, setMinPartitions] = useState('')
+  const { filterState, setFilterState } = useTopicFilter()
 
   const [observeTarget, setObserveTarget] = useState<TopicTarget | null>(null)
   const [consumeTarget, setConsumeTarget] = useState<TopicTarget | null>(null)
@@ -80,34 +81,28 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const topicGroups = broker?.topicGroups ?? []
   const pinnedTopics = broker?.pinnedTopics ?? []
 
-  const load = useCallback(async (force?: boolean) => {
-    setLoading(true)
-    try {
-      if (force) await InvalidateTopicsCache(brokerId)
-      const result = await ListTopics(profileId, brokerId)
-      setTopics(result ?? [])
-    } catch (err) {
-      setTopics([])
-      toast.error('Failed to load topics', { description: String(err) })
-    } finally {
-      setLoading(false)
-    }
-  }, [profileId, brokerId])
+  const load = useCallback(
+    async (force?: boolean) => {
+      setLoading(true)
+      try {
+        if (force) await InvalidateTopicsCache(brokerId)
+        const result = await ListTopics(profileId, brokerId)
+        setTopics(result ?? [])
+      } catch (err) {
+        setTopics([])
+        toast.error('Failed to load topics', { description: String(err) })
+      } finally {
+        setLoading(false)
+      }
+    },
+    [profileId, brokerId],
+  )
 
   useEffect(() => {
     load()
   }, [load])
 
-  // Regex validation
-  const regexError = useMemo(() => {
-    if (!regexEnabled || !search) return false
-    try {
-      new RegExp(search)
-      return false
-    } catch {
-      return true
-    }
-  }, [search, regexEnabled])
+  const { search, regexEnabled, regexError, minPartitions } = filterState
 
   const filtered = useMemo(() => {
     let result = topics
@@ -147,7 +142,10 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const pinnedSet = new Set(pinnedTopics)
   const pinnedFiltered = filtered.filter((t) => pinnedSet.has(t.name))
   const ungrouped = filtered.filter((t) => !groupedTopicNames.has(t.name) && !pinnedSet.has(t.name))
-  const mainList = topicGroups.length > 0 || pinnedFiltered.length > 0 ? ungrouped : filtered.filter((t) => !pinnedSet.has(t.name))
+  const mainList =
+    topicGroups.length > 0 || pinnedFiltered.length > 0
+      ? ungrouped
+      : filtered.filter((t) => !pinnedSet.has(t.name))
 
   const toggleGroupCollapse = (groupId: string) => {
     setCollapsedGroups((prev) => {
@@ -161,8 +159,12 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) return
     try {
-      const g: TopicGroup = { id: '', name: newGroupName.trim(), topics: [] }
-      await SaveTopicGroup(profileId, brokerId, g as any)
+      const g = profileModels.TopicGroup.createFrom({
+        id: '',
+        name: newGroupName.trim(),
+        topics: [],
+      })
+      await SaveTopicGroup(profileId, brokerId, g)
       refreshProfile()
       setNewGroupName('')
       setNewGroupOpen(false)
@@ -184,8 +186,11 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
     const group = topicGroups.find((g) => g.id === groupId)
     if (!group) return
     try {
-      const updated: TopicGroup = { ...group, topics: [...group.topics, topicName] }
-      await SaveTopicGroup(profileId, brokerId, updated as any)
+      const updated = profileModels.TopicGroup.createFrom({
+        ...group,
+        topics: [...group.topics, topicName],
+      })
+      await SaveTopicGroup(profileId, brokerId, updated)
       refreshProfile()
     } catch (err) {
       toast.error('Failed to assign topic to group', { description: String(err) })
@@ -196,8 +201,11 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
     const group = topicGroups.find((g) => g.id === groupId)
     if (!group) return
     try {
-      const updated: TopicGroup = { ...group, topics: group.topics.filter((t) => t !== topicName) }
-      await SaveTopicGroup(profileId, brokerId, updated as any)
+      const updated = profileModels.TopicGroup.createFrom({
+        ...group,
+        topics: group.topics.filter((t) => t !== topicName),
+      })
+      await SaveTopicGroup(profileId, brokerId, updated)
       refreshProfile()
     } catch (err) {
       toast.error('Failed to remove topic from group', { description: String(err) })
@@ -236,7 +244,9 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const flatTopics: Topic[] = [...pinnedFiltered]
   for (const group of topicGroups) {
     if (!collapsedGroups.has(group.id)) {
-      flatTopics.push(...filtered.filter((t) => group.topics.includes(t.name) && !pinnedSet.has(t.name)))
+      flatTopics.push(
+        ...filtered.filter((t) => group.topics.includes(t.name) && !pinnedSet.has(t.name)),
+      )
     }
   }
   flatTopics.push(...mainList)
@@ -292,10 +302,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="text-xs">
               {topicGroups.map((g) => (
-                <DropdownMenuItem
-                  key={g.id}
-                  onClick={() => handleAssignToGroup(g.id, topic.name)}
-                >
+                <DropdownMenuItem key={g.id} onClick={() => handleAssignToGroup(g.id, topic.name)}>
                   {g.name}
                 </DropdownMenuItem>
               ))}
@@ -319,31 +326,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center gap-2 px-3 py-2 shrink-0">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder={regexEnabled ? 'Regex pattern...' : 'Search topics...'}
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={cn('h-7 pl-7 text-xs', regexError && 'border-destructive focus-visible:ring-destructive')}
-          />
-        </div>
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer select-none">
-          <Checkbox
-            checked={regexEnabled}
-            onCheckedChange={(v) => setRegexEnabled(v === true)}
-            className="h-3.5 w-3.5"
-          />
-          Regex
-        </label>
-        <Input
-          placeholder="Min partitions"
-          type="number"
-          min={0}
-          value={minPartitions}
-          onChange={(e) => setMinPartitions(e.target.value)}
-          className="h-7 w-28 text-xs"
-        />
+        <TopicFilterBar value={filterState} onChange={setFilterState} />
         <Button
           variant="outline"
           size="sm"
@@ -394,7 +377,12 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
         ) : topics.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-xs text-muted-foreground gap-2">
             <p>No topics found.</p>
-            <Button variant="outline" size="sm" className="text-xs" onClick={() => setCreateOpen(true)}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => setCreateOpen(true)}
+            >
               Create topic
             </Button>
           </div>
@@ -406,17 +394,19 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
                 <div className="flex items-center gap-1 px-1 py-1">
                   <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
                   <span className="text-xs font-medium text-foreground/80">Pinned</span>
-                  <span className="text-[10px] text-muted-foreground ml-1">({pinnedFiltered.length})</span>
+                  <span className="text-[10px] text-muted-foreground ml-1">
+                    ({pinnedFiltered.length})
+                  </span>
                 </div>
-                <div className="ml-4">
-                  {pinnedFiltered.map((t) => renderTopicRow(t))}
-                </div>
+                <div className="ml-4">{pinnedFiltered.map((t) => renderTopicRow(t))}</div>
               </div>
             )}
 
             {/* Named groups */}
             {topicGroups.map((group) => {
-              const groupTopics = filtered.filter((t) => group.topics.includes(t.name) && !pinnedSet.has(t.name))
+              const groupTopics = filtered.filter(
+                (t) => group.topics.includes(t.name) && !pinnedSet.has(t.name),
+              )
               const isCollapsed = collapsedGroups.has(group.id)
 
               return (
@@ -434,7 +424,9 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
                     </button>
                     <FolderOpen className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs font-medium text-foreground/80">{group.name}</span>
-                    <span className="text-[10px] text-muted-foreground ml-1">({groupTopics.length})</span>
+                    <span className="text-[10px] text-muted-foreground ml-1">
+                      ({groupTopics.length})
+                    </span>
                     <button
                       onClick={() => handleDeleteGroup(group.id)}
                       className="ml-auto p-0.5 rounded text-muted-foreground/50 hover:text-destructive text-[10px] transition-colors"
@@ -446,7 +438,9 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
                   {!isCollapsed && (
                     <div className="ml-4">
                       {groupTopics.length === 0 ? (
-                        <p className="px-2 py-1 text-[10px] text-muted-foreground/60">No topics in group</p>
+                        <p className="px-2 py-1 text-[10px] text-muted-foreground/60">
+                          No topics in group
+                        </p>
                       ) : (
                         groupTopics.map((t) => renderTopicRow(t, group.id))
                       )}
@@ -461,7 +455,9 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
               <div className="mb-1">
                 <div className="flex items-center gap-1 px-1 py-1">
                   <span className="text-xs font-medium text-muted-foreground">Ungrouped</span>
-                  <span className="text-[10px] text-muted-foreground ml-1">({mainList.length})</span>
+                  <span className="text-[10px] text-muted-foreground ml-1">
+                    ({mainList.length})
+                  </span>
                 </div>
               </div>
             )}
@@ -531,7 +527,8 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
             <AlertDialogHeader>
               <AlertDialogTitle>Delete Topic</AlertDialogTitle>
               <AlertDialogDescription>
-                Delete topic <span className="font-mono">{deleteTopicTarget.topic}</span>? All data will be permanently lost.
+                Delete topic <span className="font-mono">{deleteTopicTarget.topic}</span>? All data
+                will be permanently lost.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -539,7 +536,11 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 onClick={async () => {
-                  await DeleteTopic(deleteTopicTarget.profileId, deleteTopicTarget.brokerId, deleteTopicTarget.topic)
+                  await DeleteTopic(
+                    deleteTopicTarget.profileId,
+                    deleteTopicTarget.brokerId,
+                    deleteTopicTarget.topic,
+                  )
                   handleTopicDeleted()
                 }}
               >
@@ -563,8 +564,12 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
             onKeyDown={(e) => e.key === 'Enter' && handleCreateGroup()}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setNewGroupOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreateGroup} disabled={!newGroupName.trim()}>Create</Button>
+            <Button variant="outline" onClick={() => setNewGroupOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateGroup} disabled={!newGroupName.trim()}>
+              Create
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

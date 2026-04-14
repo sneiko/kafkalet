@@ -2,18 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { Check, ChevronDown, Plus, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/shared/ui/popover'
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
 import { ListProfiles, GetActiveProfile, SwitchProfile, CreateProfile, EventsOn } from '@shared/api'
 import { useProfileStore } from '@entities/profile'
 
 export function ProfileSwitcher() {
-  const { profiles, activeProfileId, setProfiles, setActiveProfileId, upsertProfile } = useProfileStore()
+  const { profiles, activeProfileId, setProfiles, setActiveProfileId, upsertProfile } =
+    useProfileStore()
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
   const [switching, setSwitching] = useState(false)
@@ -76,7 +73,7 @@ export function ProfileSwitcher() {
     if (!trimmed) return
     try {
       const created = await CreateProfile(trimmed)
-      upsertProfile(created as any)
+      upsertProfile(created)
       await SwitchProfile(created.id)
       setActiveProfileId(created.id)
       setNewName('')
@@ -106,7 +103,16 @@ export function ProfileSwitcher() {
   const activeProfile = profiles.find((p) => p.id === activeProfileId)
 
   return (
-    <Popover open={open} onOpenChange={(v) => { setOpen(v); if (!v) { setCreating(false); setNewName('') } }}>
+    <Popover
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v)
+        if (!v) {
+          setCreating(false)
+          setNewName('')
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           variant="ghost"
@@ -128,7 +134,9 @@ export function ProfileSwitcher() {
             className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
             onClick={() => handleSelect(p.id)}
           >
-            <Check className={`h-3.5 w-3.5 shrink-0 ${p.id === activeProfileId ? 'opacity-100' : 'opacity-0'}`} />
+            <Check
+              className={`h-3.5 w-3.5 shrink-0 ${p.id === activeProfileId ? 'opacity-100' : 'opacity-0'}`}
+            />
             <span className="truncate">{p.name}</span>
           </button>
         ))}
@@ -142,7 +150,12 @@ export function ProfileSwitcher() {
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={handleCreateKeyDown}
-              onBlur={() => { if (!newName.trim()) { setCreating(false); setNewName('') } }}
+              onBlur={() => {
+                if (!newName.trim()) {
+                  setCreating(false)
+                  setNewName('')
+                }
+              }}
               placeholder="Profile name"
               className="h-7 text-sm"
               autoFocus

@@ -18,11 +18,7 @@ export interface RawMessage {
  *
  * Returns null if no plugin matches.
  */
-export function applyPlugin(
-  msg: RawMessage,
-  topic: string,
-  plugins: Plugin[],
-): string | null {
+export function applyPlugin(msg: RawMessage, topic: string, plugins: Plugin[]): string | null {
   const matching = plugins.find((p) => {
     if (!p.topicPattern) return false
     try {
@@ -38,7 +34,6 @@ export function applyPlugin(
     for (const h of msg.headers ?? []) {
       headers[h.key] = h.value
     }
-    // eslint-disable-next-line no-new-func
     const fn = new Function('value', 'key', 'headers', matching.script)
     const result = fn(msg.value, msg.key, headers)
     return typeof result === 'string' ? result : JSON.stringify(result, null, 2)

@@ -2,12 +2,7 @@ import { useState } from 'react'
 import { Copy, Check } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { JsonHighlight } from '@/shared/ui/json-highlight'
 import { formatTimestamp, formatRelativeTime } from '@shared/lib/formatters'
 import type { KafkaMessage } from '../model/types'
@@ -74,7 +69,9 @@ export function MessageDetailDialog({ message, decodedValue, open, onOpenChange 
               <span className="text-muted-foreground">Timestamp</span>
               <p className="font-mono">
                 {formatTimestamp(message.timestamp)}{' '}
-                <span className="text-muted-foreground">({formatRelativeTime(message.timestamp)})</span>
+                <span className="text-muted-foreground">
+                  ({formatRelativeTime(message.timestamp)})
+                </span>
               </p>
             </div>
             <div>
@@ -101,7 +98,9 @@ export function MessageDetailDialog({ message, decodedValue, open, onOpenChange 
           {/* Value */}
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="font-medium text-muted-foreground uppercase tracking-wide">Value</span>
+              <span className="font-medium text-muted-foreground uppercase tracking-wide">
+                Value
+              </span>
               <div className="flex items-center gap-1 ml-auto">
                 {hasDecoded && (
                   <Button
@@ -117,9 +116,11 @@ export function MessageDetailDialog({ message, decodedValue, open, onOpenChange 
               </div>
             </div>
             <pre className="bg-muted/30 rounded p-2 font-mono text-xs overflow-auto max-h-64 whitespace-pre-wrap break-all">
-              {prettyValue
-                ? <JsonHighlight code={prettyValue} />
-                : <span className="text-muted-foreground/50 italic">empty</span>}
+              {prettyValue ? (
+                <JsonHighlight code={prettyValue} />
+              ) : (
+                <span className="text-muted-foreground/50 italic">empty</span>
+              )}
             </pre>
           </div>
 

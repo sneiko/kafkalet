@@ -103,13 +103,17 @@ export function GroupLagPanel() {
         <span className="font-mono text-foreground/80 truncate">{session.topic}</span>
 
         {groupData && (
-          <span className={`tabular-nums shrink-0 ${groupData.totalLag > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+          <span
+            className={`tabular-nums shrink-0 ${groupData.totalLag > 0 ? 'text-yellow-500' : 'text-green-500'}`}
+          >
             lag: {groupData.totalLag}
           </span>
         )}
 
         {resetResult && (
-          <span className={resetResult.ok ? 'text-green-500 shrink-0' : 'text-destructive shrink-0'}>
+          <span
+            className={resetResult.ok ? 'text-green-500 shrink-0' : 'text-destructive shrink-0'}
+          >
             {resetResult.msg}
           </span>
         )}
@@ -138,14 +142,20 @@ export function GroupLagPanel() {
           <DropdownMenuContent align="end" className="text-xs">
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={() => { setResetResult(null); setResetTarget('earliest') }}
+              onClick={() => {
+                setResetResult(null)
+                setResetTarget('earliest')
+              }}
             >
               Reset to Earliest
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={() => { setResetResult(null); setResetTarget('latest') }}
+              onClick={() => {
+                setResetResult(null)
+                setResetTarget('latest')
+              }}
             >
               Reset to Latest
             </DropdownMenuItem>
@@ -184,9 +194,15 @@ export function GroupLagPanel() {
               {groupData.partitions.map((p) => (
                 <tr key={p.partition} className="border-t border-border/30">
                   <td className="py-0.5 tabular-nums">{p.partition}</td>
-                  <td className="py-0.5 text-right tabular-nums text-muted-foreground">{p.commitOffset}</td>
-                  <td className="py-0.5 text-right tabular-nums text-muted-foreground">{p.logEndOffset}</td>
-                  <td className={`py-0.5 text-right tabular-nums ${p.lag > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+                  <td className="py-0.5 text-right tabular-nums text-muted-foreground">
+                    {p.commitOffset}
+                  </td>
+                  <td className="py-0.5 text-right tabular-nums text-muted-foreground">
+                    {p.logEndOffset}
+                  </td>
+                  <td
+                    className={`py-0.5 text-right tabular-nums ${p.lag > 0 ? 'text-yellow-500' : 'text-green-500'}`}
+                  >
                     {p.lag}
                   </td>
                 </tr>
@@ -202,8 +218,8 @@ export function GroupLagPanel() {
           <AlertDialogHeader>
             <AlertDialogTitle>Reset consumer group offset</AlertDialogTitle>
             <AlertDialogDescription>
-              Reset <strong>{session.groupId}</strong> on topic{' '}
-              <strong>{session.topic}</strong> to <strong>{resetTarget}</strong>.
+              Reset <strong>{session.groupId}</strong> on topic <strong>{session.topic}</strong> to{' '}
+              <strong>{resetTarget}</strong>.
               <br />
               The active session will need to be restarted to pick up the new position.
             </AlertDialogDescription>

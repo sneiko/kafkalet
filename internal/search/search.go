@@ -2,16 +2,15 @@ package search
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"regexp"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"kafkalet/internal/broker"
+	"kafkalet/internal/message"
 	"kafkalet/internal/profile"
 	"kafkalet/internal/schema"
 )
@@ -177,7 +176,7 @@ func newSearchSession(
 		cancel: cancel,
 	}
 
-	decode := buildDecode(reg)
+	decode := message.BuildDecode(reg)
 
 	go s.scanLoop(sessCtx, req, keyMatcher, valueMatcher, decode, partitionEnds, totalEst, emit)
 	return s, nil
@@ -248,8 +247,8 @@ func (s *SearchSession) scanLoop(
 			}
 
 			// Match on raw bytes first (before expensive decode)
-			rawKey := safeString(r.Key)
-			rawValue := safeString(r.Value)
+			rawKey := message.SafeString(r.Key)
+			rawValue := message.SafeString(r.Value)
 
 			keyMatched := keyMatch == nil || keyMatch(rawKey)
 			valueMatched := valueMatch == nil || valueMatch(rawValue)
@@ -272,7 +271,7 @@ func (s *SearchSession) scanLoop(
 						Key:       rawKey,
 						Value:     displayValue,
 						Timestamp: r.Timestamp,
-						Headers:   convertHeaders(r.Headers),
+						Headers:   message.ConvertHeaders(r.Headers),
 					})
 				}
 			}
@@ -316,43 +315,3 @@ func partitionEndsKeys(m map[int32]int64) []int32 {
 	return keys
 }
 
-// safeString converts a byte slice to string. Uses base64 if the bytes
-// are not valid UTF-8.
-func safeString(b []byte) string {
-	if len(b) == 0 {
-		return ""
-	}
-	if utf8.Valid(b) {
-		return string(b)
-	}
-	return base64.StdEncoding.EncodeToString(b)
-}
-
-// convertHeaders converts franz-go record headers to our Header type.
-func convertHeaders(headers []kgo.RecordHeader) []Header {
-	result := make([]Header, 0, len(headers))
-	for _, h := range headers {
-		result = append(result, Header{
-			Key:   h.Key,
-			Value: safeString(h.Value),
-		})
-	}
-	return result
-}
-
-// buildDecode returns a value-decode function backed by Schema Registry (if reg != nil).
-func buildDecode(reg *schema.Registry) func([]byte) string {
-	if reg == nil {
-		return safeString
-	}
-	return func(raw []byte) string {
-		decoded, ok, err := schema.TryDecodeAvro(reg, raw)
-		if ok {
-			if err != nil {
-				return fmt.Sprintf("[avro decode error: %v]", err)
-			}
-			return decoded
-		}
-		return safeString(raw)
-	}
-}

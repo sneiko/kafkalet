@@ -31,8 +31,7 @@ export const useProfileStore = create<ProfileState>((set) => ({
       return { profiles: next }
     }),
 
-  removeProfile: (id) =>
-    set((s) => ({ profiles: s.profiles.filter((p) => p.id !== id) })),
+  removeProfile: (id) => set((s) => ({ profiles: s.profiles.filter((p) => p.id !== id) })),
 }))
 
 export const activeProfile = () => {

@@ -4,22 +4,9 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2, Trash2, Plus, UserCheck, KeyRound, Check, X } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/shared/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form'
 import { Input } from '@/shared/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/shared/ui/select'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -93,9 +80,15 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
       TestConnectionDirect(
         broker.addresses,
         broker.tls as unknown as profile.TLSConfig,
-        { mechanism: values.credMechanism, username: values.credUsername, oauthTokenURL: '', oauthClientID: '', oauthScopes: [] } as unknown as profile.SASLConfig,
-        values.credPassword
-      )
+        {
+          mechanism: values.credMechanism,
+          username: values.credUsername,
+          oauthTokenURL: '',
+          oauthClientID: '',
+          oauthScopes: [],
+        } as unknown as profile.SASLConfig,
+        values.credPassword,
+      ),
     )
   }
 
@@ -105,14 +98,20 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
       TestConnectionDirect(
         broker.addresses,
         broker.tls as unknown as profile.TLSConfig,
-        { mechanism: values.credMechanism, username: values.credUsername, oauthTokenURL: '', oauthClientID: '', oauthScopes: [] } as unknown as profile.SASLConfig,
-        values.credPassword
-      )
+        {
+          mechanism: values.credMechanism,
+          username: values.credUsername,
+          oauthTokenURL: '',
+          oauthClientID: '',
+          oauthScopes: [],
+        } as unknown as profile.SASLConfig,
+        values.credPassword,
+      ),
     )
     if (!ok) return
 
     try {
-      const newCred = await AddBrokerCredential(profileId, broker.id, {
+      const newCred = (await AddBrokerCredential(profileId, broker.id, {
         id: '',
         name: values.credName,
         sasl: {
@@ -122,7 +121,7 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
           oauthClientID: '',
           oauthScopes: [],
         },
-      } as unknown as profile.NamedCredential) as unknown as NamedCredential
+      } as unknown as profile.NamedCredential)) as unknown as NamedCredential
 
       if (values.credPassword) {
         await SetNamedCredentialPassword(profileId, broker.id, newCred.id, values.credPassword)
@@ -131,9 +130,7 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
       const currentProfile = profiles.find((p) => p.id === profileId)
       if (currentProfile) {
         const updatedBrokers = currentProfile.brokers.map((b) =>
-          b.id === broker.id
-            ? { ...b, credentials: [...(b.credentials ?? []), newCred] }
-            : b
+          b.id === broker.id ? { ...b, credentials: [...(b.credentials ?? []), newCred] } : b,
         )
         upsertProfile({ ...currentProfile, brokers: updatedBrokers })
       }
@@ -153,7 +150,7 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
       const updatedBrokers = currentProfile.brokers.map((b) =>
         b.id === broker.id
           ? { ...b, credentials: (b.credentials ?? []).filter((c) => c.id !== cred.id) }
-          : b
+          : b,
       )
       upsertProfile({ ...currentProfile, brokers: updatedBrokers })
     }
@@ -171,7 +168,9 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
             <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate">{cred.name}</p>
-                <p className="text-xs text-muted-foreground">{cred.sasl.mechanism} {cred.sasl.username && `· ${cred.sasl.username}`}</p>
+                <p className="text-xs text-muted-foreground">
+                  {cred.sasl.mechanism} {cred.sasl.username && `· ${cred.sasl.username}`}
+                </p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {activeCredentialID === cred.id && (
@@ -181,7 +180,10 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => { setUpdatingCredId(updatingCredId === cred.id ? null : cred.id); setUpdatePassword('') }}
+                  onClick={() => {
+                    setUpdatingCredId(updatingCredId === cred.id ? null : cred.id)
+                    setUpdatePassword('')
+                  }}
                   aria-label="Update password"
                 >
                   <KeyRound className="h-3.5 w-3.5" />
@@ -213,13 +215,20 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
                   disabled={updateSaving || !updatePassword}
                   onClick={() => handleUpdatePassword(cred.id)}
                 >
-                  {updateSaving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  {updateSaving ? (
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                  ) : (
+                    <Check className="h-3 w-3" />
+                  )}
                 </Button>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => { setUpdatingCredId(null); setUpdatePassword('') }}
+                  onClick={() => {
+                    setUpdatingCredId(null)
+                    setUpdatePassword('')
+                  }}
                 >
                   <X className="h-3 w-3" />
                 </Button>
@@ -230,8 +239,13 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
 
         {addingCred ? (
           <Form {...credForm}>
-            <form onSubmit={credForm.handleSubmit(handleAddCredential)} className="space-y-3 rounded-md border border-border p-3">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">New User</p>
+            <form
+              onSubmit={credForm.handleSubmit(handleAddCredential)}
+              className="space-y-3 rounded-md border border-border p-3"
+            >
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                New User
+              </p>
               <FormField
                 control={credForm.control}
                 name="credName"
@@ -285,7 +299,9 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
                 name="credPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Password <span className="text-muted-foreground">(stored in keychain)</span></FormLabel>
+                    <FormLabel className="text-xs">
+                      Password <span className="text-muted-foreground">(stored in keychain)</span>
+                    </FormLabel>
                     <FormControl>
                       <Input type="password" className="h-8 text-sm" {...field} />
                     </FormControl>
@@ -297,19 +313,46 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
                 <p className="text-xs text-destructive">{credForm.formState.errors.root.message}</p>
               )}
               {credTest.testResult && (
-                <p className={credTest.testResult === 'Connection successful' ? 'text-xs text-green-500' : 'text-xs text-destructive'}>
+                <p
+                  className={
+                    credTest.testResult === 'Connection successful'
+                      ? 'text-xs text-green-500'
+                      : 'text-xs text-destructive'
+                  }
+                >
                   {credTest.testResult}
                 </p>
               )}
               <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={credForm.formState.isSubmitting || credTest.testing}>
-                  {(credForm.formState.isSubmitting || credTest.testing) && <Loader2 className="animate-spin" />}
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={credForm.formState.isSubmitting || credTest.testing}
+                >
+                  {(credForm.formState.isSubmitting || credTest.testing) && (
+                    <Loader2 className="animate-spin" />
+                  )}
                   {credTest.testing ? 'Testing...' : 'Add'}
                 </Button>
-                <Button type="button" variant="outline" size="sm" onClick={handleCredTest} disabled={credTest.testing}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCredTest}
+                  disabled={credTest.testing}
+                >
                   Test
                 </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => { setAddingCred(false); credForm.reset(); credTest.resetResult() }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setAddingCred(false)
+                    credForm.reset()
+                    credTest.resetResult()
+                  }}
+                >
                   Cancel
                 </Button>
               </div>
@@ -329,7 +372,10 @@ export function UsersTab({ profileId, broker, credentials, activeCredentialID }:
       </div>
 
       {/* Delete credential confirmation */}
-      <AlertDialog open={Boolean(credDeleteTarget)} onOpenChange={(v) => !v && setCredDeleteTarget(null)}>
+      <AlertDialog
+        open={Boolean(credDeleteTarget)}
+        onOpenChange={(v) => !v && setCredDeleteTarget(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete User</AlertDialogTitle>

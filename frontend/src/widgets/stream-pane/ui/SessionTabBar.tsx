@@ -85,13 +85,9 @@ export function SessionTabBar() {
           )}
           <span className="max-w-[120px] truncate font-mono">{tab.topic}</span>
           {tab.kind === 'stream' && tab.mode === 'consumer' && tab.groupId && (
-            <span className="text-muted-foreground/60 truncate max-w-[80px]">
-              {tab.groupId}
-            </span>
+            <span className="text-muted-foreground/60 truncate max-w-[80px]">{tab.groupId}</span>
           )}
-          {tab.kind === 'search' && (
-            <span className="text-orange-500/60 text-[10px]">search</span>
-          )}
+          {tab.kind === 'search' && <span className="text-orange-500/60 text-[10px]">search</span>}
           <Tooltip>
             <TooltipTrigger asChild>
               <button

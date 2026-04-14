@@ -2,18 +2,12 @@ import { useState, useMemo } from 'react'
 import { Loader2, Search } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Label } from '@/shared/ui/label'
 import { Input } from '@/shared/ui/input'
 import { Checkbox } from '@/shared/ui/checkbox'
 
-import { StartSearch } from '@shared/api'
+import { StartSearch, search } from '@shared/api'
 import { useSearchStore } from '@entities/search'
 
 interface Props {
@@ -71,7 +65,7 @@ export function SearchDialog({
     setLoading(true)
     setError(null)
     try {
-      const req = {
+      const req = search.SearchRequest.createFrom({
         topic,
         keyPattern: keyPattern.trim(),
         valuePattern: valuePattern.trim(),
@@ -81,9 +75,9 @@ export function SearchDialog({
         maxResults: parseInt(maxResults, 10) || 1000,
         maxScan: parseInt(maxScan, 10) || 1_000_000,
         useRegex,
-      }
+      })
 
-      const sessionId = await StartSearch(profileId, brokerId, req as any)
+      const sessionId = await StartSearch(profileId, brokerId, req)
       addSession({
         id: sessionId,
         profileId,
@@ -195,11 +189,7 @@ export function SearchDialog({
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            size="sm"
-            onClick={handleStart}
-            disabled={loading || !hasPattern || !!regexError}
-          >
+          <Button size="sm" onClick={handleStart} disabled={loading || !hasPattern || !!regexError}>
             {loading && <Loader2 className="animate-spin" />}
             Start Search
           </Button>

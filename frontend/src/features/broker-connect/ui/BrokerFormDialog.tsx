@@ -4,13 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { Loader2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Form } from '@/shared/ui/form'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
 
@@ -105,13 +99,16 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       setAutoTesting(true)
       const params = buildTestParams(values)
       const ok = await addTest.runTest(() =>
-        TestConnectionDirect(params.addresses, params.tls, params.sasl, params.password)
+        TestConnectionDirect(params.addresses, params.tls, params.sasl, params.password),
       )
       setAutoTesting(false)
       if (!ok) return
     }
 
-    const addresses = values.addresses.split(',').map((s) => s.trim()).filter(Boolean)
+    const addresses = values.addresses
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
     const brokerData: Broker = {
       id: broker?.id ?? '',
       name: values.name,
@@ -138,7 +135,10 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         await UpdateBroker(profileId, brokerData as unknown as profile.Broker)
         savedBroker = brokerData
       } else {
-        savedBroker = await AddBroker(profileId, brokerData as unknown as profile.Broker) as unknown as Broker
+        savedBroker = (await AddBroker(
+          profileId,
+          brokerData as unknown as profile.Broker,
+        )) as unknown as Broker
       }
 
       if (values.srPassword) {
@@ -150,9 +150,11 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         const mechanism = values.initialCredMechanism
         const isOAuth = mechanism === 'OAUTHBEARER'
         const extensions = Object.fromEntries(
-          values.initialCredOAuthExtensions.filter(e => e.key.trim()).map(e => [e.key.trim(), e.value])
+          values.initialCredOAuthExtensions
+            .filter((e) => e.key.trim())
+            .map((e) => [e.key.trim(), e.value]),
         )
-        const newCred = await AddBrokerCredential(profileId, savedBroker.id, {
+        const newCred = (await AddBrokerCredential(profileId, savedBroker.id, {
           id: '',
           name: values.initialCredName.trim(),
           sasl: isOAuth
@@ -172,10 +174,15 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
                 oauthScopes: [],
                 oauthExtensions: {},
               },
-        } as unknown as profile.NamedCredential) as unknown as NamedCredential
+        } as unknown as profile.NamedCredential)) as unknown as NamedCredential
 
         if (values.initialCredPassword) {
-          await SetNamedCredentialPassword(profileId, savedBroker.id, newCred.id, values.initialCredPassword)
+          await SetNamedCredentialPassword(
+            profileId,
+            savedBroker.id,
+            newCred.id,
+            values.initialCredPassword,
+          )
         }
 
         await SwitchBrokerCredential(profileId, savedBroker.id, newCred.id)
@@ -205,7 +212,9 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
     const values = form.getValues()
     const params = buildTestParams(values)
     if (params.addresses.length === 0) return
-    await addTest.runTest(() => TestConnectionDirect(params.addresses, params.tls, params.sasl, params.password))
+    await addTest.runTest(() =>
+      TestConnectionDirect(params.addresses, params.tls, params.sasl, params.password),
+    )
   }
 
   const storeProfile = profiles.find((p) => p.id === profileId)
@@ -223,9 +232,14 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         {isEdit ? (
           <Tabs defaultValue="connection" className="flex flex-col flex-1 min-h-0">
             <TabsList className="w-full shrink-0">
-              <TabsTrigger value="connection" className="flex-1">Connection</TabsTrigger>
+              <TabsTrigger value="connection" className="flex-1">
+                Connection
+              </TabsTrigger>
               <TabsTrigger value="users" className="flex-1">
-                Users {credentials.length > 0 && <span className="ml-1 text-xs text-muted-foreground">({credentials.length})</span>}
+                Users{' '}
+                {credentials.length > 0 && (
+                  <span className="ml-1 text-xs text-muted-foreground">({credentials.length})</span>
+                )}
               </TabsTrigger>
             </TabsList>
 
@@ -237,12 +251,24 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
                     <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
                   )}
                   {editTest.testResult && (
-                    <p className={editTest.testResult.startsWith('Connection') ? 'text-sm text-green-500' : 'text-sm text-destructive'}>
+                    <p
+                      className={
+                        editTest.testResult.startsWith('Connection')
+                          ? 'text-sm text-green-500'
+                          : 'text-sm text-destructive'
+                      }
+                    >
                       {editTest.testResult}
                     </p>
                   )}
                   <DialogFooter className="gap-2">
-                    <Button type="button" variant="outline" size="sm" onClick={handleTest} disabled={editTest.testing}>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleTest}
+                      disabled={editTest.testing}
+                    >
                       {editTest.testing && <Loader2 className="animate-spin" />}
                       Test Connection
                     </Button>
@@ -275,18 +301,32 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
                   <p className="text-sm text-destructive">{form.formState.errors.root.message}</p>
                 )}
                 {addTest.testResult && (
-                  <p className={addTest.testResult === 'Connection successful' ? 'text-sm text-green-500' : 'text-sm text-destructive'}>
+                  <p
+                    className={
+                      addTest.testResult === 'Connection successful'
+                        ? 'text-sm text-green-500'
+                        : 'text-sm text-destructive'
+                    }
+                  >
                     {addTest.testResult}
                   </p>
                 )}
               </div>
               <DialogFooter className="gap-2 pt-4 shrink-0">
-                <Button type="button" variant="outline" size="sm" onClick={handleTestDirect} disabled={addTest.testing}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTestDirect}
+                  disabled={addTest.testing}
+                >
                   {addTest.testing && <Loader2 className="animate-spin" />}
                   Test Connection
                 </Button>
                 <Button type="submit" disabled={form.formState.isSubmitting || autoTesting}>
-                  {(form.formState.isSubmitting || autoTesting) && <Loader2 className="animate-spin" />}
+                  {(form.formState.isSubmitting || autoTesting) && (
+                    <Loader2 className="animate-spin" />
+                  )}
                   {autoTesting ? 'Testing...' : 'Add Broker'}
                 </Button>
               </DialogFooter>

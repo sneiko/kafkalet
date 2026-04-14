@@ -67,7 +67,7 @@ func (a *App) startup(ctx context.Context) {
 	a.streamMgr = stream.NewManager(ctx, emit)
 	a.searchMgr = search.NewManager(ctx, emit)
 
-	a.pool = broker.NewPool(broker.PoolTTL, func(b profile.Broker, pw string) (*kgo.Client, error) {
+	a.pool = broker.NewPool(ctx, broker.PoolTTL, func(b profile.Broker, pw string) (*kgo.Client, error) {
 		return broker.NewClient(b, pw)
 	})
 
@@ -91,6 +91,7 @@ func (a *App) startup(ctx context.Context) {
 }
 
 func (a *App) shutdown(_ context.Context) {
+	a.streamMgr.StopAll()
 	a.searchMgr.StopAll()
 	a.stopAllRateWatchers()
 	a.pool.Close()
@@ -147,8 +148,12 @@ func (a *App) migrateCredentials() {
 				}}
 				// Move password from legacy keychain to credential keychain
 				if pw, err := profile.GetPassword(p.ID, b.ID); err == nil && pw != "" {
-					_ = profile.SaveNamedCredentialPassword(p.ID, b.ID, credID, pw)
-					_ = profile.DeletePassword(p.ID, b.ID)
+					if err := profile.SaveNamedCredentialPassword(p.ID, b.ID, credID, pw); err != nil {
+						slog.Warn("migrate: save credential password", "broker", b.ID, "err", err)
+					}
+					if err := profile.DeletePassword(p.ID, b.ID); err != nil {
+						slog.Warn("migrate: delete legacy password", "broker", b.ID, "err", err)
+					}
 				}
 				b.ActiveCredentialID = credID
 				b.SASL = profile.SASLConfig{}
@@ -284,8 +289,16 @@ func (a *App) ExportSettings(includeSecrets bool) error {
 			eb.TLS.ClientCertPath = ""
 			eb.TLS.ClientKeyPath = ""
 			if includeSecrets {
-				eb.SASLPassword, _ = profile.GetPassword(p.ID, b.ID)
-				eb.SchemaRegistryPassword, _ = profile.GetSchemaRegistryPassword(p.ID, b.ID)
+				if pw, err := profile.GetPassword(p.ID, b.ID); err != nil {
+					slog.Warn("export: read SASL password", "broker", b.ID, "err", err)
+				} else {
+					eb.SASLPassword = pw
+				}
+				if pw, err := profile.GetSchemaRegistryPassword(p.ID, b.ID); err != nil {
+					slog.Warn("export: read schema registry password", "broker", b.ID, "err", err)
+				} else {
+					eb.SchemaRegistryPassword = pw
+				}
 				if b.TLS.CACertPath != "" {
 					if pem, err := os.ReadFile(b.TLS.CACertPath); err == nil {
 						eb.CACertPEM = string(pem)
@@ -311,7 +324,11 @@ func (a *App) ExportSettings(includeSecrets bool) error {
 			for _, cred := range b.Credentials {
 				ec := exportCredential{ID: cred.ID, Name: cred.Name, SASL: cred.SASL}
 				if includeSecrets {
-					ec.Password, _ = profile.GetNamedCredentialPassword(p.ID, b.ID, cred.ID)
+					if pw, err := profile.GetNamedCredentialPassword(p.ID, b.ID, cred.ID); err != nil {
+						slog.Warn("export: read credential password", "credential", cred.ID, "err", err)
+					} else {
+						ec.Password = pw
+					}
 				}
 				eb.Credentials = append(eb.Credentials, ec)
 			}
@@ -579,7 +596,9 @@ func (a *App) SetNamedCredentialPassword(profileID, brokerID, credentialID, pass
 
 // DeleteBrokerCredential removes a named credential from a broker and deletes its keychain entry.
 func (a *App) DeleteBrokerCredential(profileID, brokerID, credentialID string) error {
-	_ = profile.DeleteNamedCredentialPassword(profileID, brokerID, credentialID)
+	if err := profile.DeleteNamedCredentialPassword(profileID, brokerID, credentialID); err != nil {
+		slog.Warn("delete credential password from keychain", "credential", credentialID, "err", err)
+	}
 	return a.profileStore.DeleteBrokerCredential(profileID, brokerID, credentialID)
 }
 
@@ -1074,7 +1093,10 @@ func (a *App) getOrCreateRegistry(profileID string, b profile.Broker) *schema.Re
 	if reg, ok := a.registries[b.ID]; ok {
 		return reg
 	}
-	password, _ := profile.GetSchemaRegistryPassword(profileID, b.ID)
+	password, err := profile.GetSchemaRegistryPassword(profileID, b.ID)
+	if err != nil {
+		slog.Warn("schema registry password lookup failed", "profile", profileID, "broker", b.ID, "err", err)
+	}
 	reg := schema.New(b.SchemaRegistry.URL, b.SchemaRegistry.Username, password)
 	a.registries[b.ID] = reg
 	return reg

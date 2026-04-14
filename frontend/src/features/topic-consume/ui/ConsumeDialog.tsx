@@ -5,21 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/shared/ui/form'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 
@@ -121,10 +108,7 @@ export function ConsumeDialog({
               </p>
               <div className="flex gap-3">
                 {(['latest', 'earliest'] as const).map((opt) => (
-                  <label
-                    key={opt}
-                    className="flex items-center gap-1.5 text-sm cursor-pointer"
-                  >
+                  <label key={opt} className="flex items-center gap-1.5 text-sm cursor-pointer">
                     <input
                       type="radio"
                       value={opt}

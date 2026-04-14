@@ -7,6 +7,7 @@ import (
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"kafkalet/internal/broker"
+	"kafkalet/internal/message"
 	"kafkalet/internal/profile"
 )
 
@@ -70,10 +71,10 @@ func (s *ObserverSession) pollLoop(ctx context.Context, decode func([]byte) stri
 				Topic:     r.Topic,
 				Partition: r.Partition,
 				Offset:    r.Offset,
-				Key:       safeString(r.Key),
+				Key:       message.SafeString(r.Key),
 				Value:     decode(r.Value),
 				Timestamp: r.Timestamp,
-				Headers:   convertHeaders(r.Headers),
+				Headers:   message.ConvertHeaders(r.Headers),
 			})
 		})
 	}

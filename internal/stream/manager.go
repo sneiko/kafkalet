@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/twmb/franz-go/pkg/kgo"
 	"kafkalet/internal/apperr"
+	"kafkalet/internal/message"
 	"kafkalet/internal/profile"
 	"kafkalet/internal/schema"
 )
@@ -79,7 +80,7 @@ func (m *Manager) StartObserver(b profile.Broker, password, topic string, opts O
 
 	sessionID := uuid.NewString()
 	obs, err := newObserver(m.ctx, sessionID, b, password, consumeOpts,
-		buildDecode(opts.Registry),
+		message.BuildDecode(opts.Registry),
 		func(msg KafkaMessage) { m.emit("stream:"+sessionID, msg) },
 	)
 	if err != nil {
@@ -103,7 +104,7 @@ func (m *Manager) StartConsumer(b profile.Broker, password, topic string, opts C
 
 	sessionID := uuid.NewString()
 	cons, err := newConsumer(m.ctx, sessionID, b, password, topic, opts.GroupID, resetOffset,
-		buildDecode(opts.Registry),
+		message.BuildDecode(opts.Registry),
 		func(msg KafkaMessage) { m.emit("stream:"+sessionID, msg) },
 	)
 	if err != nil {
@@ -116,24 +117,6 @@ func (m *Manager) StartConsumer(b profile.Broker, password, topic string, opts C
 	m.mu.Unlock()
 
 	return sessionID, nil
-}
-
-// buildDecode returns a value-decode function backed by Schema Registry (if reg != nil).
-// When reg is nil the function falls back to safeString (UTF-8 or base64).
-func buildDecode(reg *schema.Registry) func([]byte) string {
-	if reg == nil {
-		return safeString
-	}
-	return func(raw []byte) string {
-		decoded, ok, err := schema.TryDecodeAvro(reg, raw)
-		if ok {
-			if err != nil {
-				return fmt.Sprintf("[avro decode error: %v]", err)
-			}
-			return decoded
-		}
-		return safeString(raw)
-	}
 }
 
 // CommitSession commits all marked-but-not-yet-committed offsets for a consumer session.
@@ -159,6 +142,15 @@ func (m *Manager) Stop(sessionID string) {
 	if s, ok := m.sessions[sessionID]; ok {
 		s.Stop()
 		delete(m.sessions, sessionID)
+		// Clean up brokerSessions to prevent stale ID accumulation.
+		for bid, sids := range m.brokerSessions {
+			for i, sid := range sids {
+				if sid == sessionID {
+					m.brokerSessions[bid] = append(sids[:i], sids[i+1:]...)
+					break
+				}
+			}
+		}
 	}
 }
 

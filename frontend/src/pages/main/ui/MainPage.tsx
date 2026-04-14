@@ -64,7 +64,7 @@ export function MainPage() {
       const newHeight = dragStartHeight.current + delta
       const clamped = Math.min(
         totalHeight - MIN_STREAM_HEIGHT,
-        Math.max(MIN_DASHBOARD_HEIGHT, newHeight)
+        Math.max(MIN_DASHBOARD_HEIGHT, newHeight),
       )
       setTopHeight(clamped)
     }
@@ -111,7 +111,7 @@ export function MainPage() {
               {/* Dashboard area */}
               <div
                 className="flex flex-col overflow-hidden"
-                style={{ height: hasSessions ? topHeight ?? '55%' : '100%' }}
+                style={{ height: hasSessions ? (topHeight ?? '55%') : '100%' }}
               >
                 <BrokerDashboard {...activeBroker} />
               </div>

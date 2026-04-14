@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
-import { Plus, Pencil, Trash2, ChevronLeft, Download, Upload, Loader2, RefreshCw, ExternalLink } from 'lucide-react'
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  ChevronLeft,
+  Download,
+  Upload,
+  Loader2,
+  RefreshCw,
+  ExternalLink,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { Button } from '@/shared/ui/button'
 import { IconButton } from '@/shared/ui/icon-button'
 import { Input } from '@/shared/ui/input'
 import { Separator } from '@/shared/ui/separator'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/shared/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -210,11 +214,26 @@ export function SettingsPage({ onBack }: Props) {
           <ChevronLeft className="h-4 w-4" />
         </IconButton>
         <h1 className="text-sm font-semibold flex-1">Settings</h1>
-        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={handleImport} disabled={importing}>
-          {importing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={handleImport}
+          disabled={importing}
+        >
+          {importing ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Upload className="h-3.5 w-3.5" />
+          )}
           Import Settings
         </Button>
-        <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setShowExportWarning(true)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={() => setShowExportWarning(true)}
+        >
           <Download className="h-3.5 w-3.5" />
           Export Settings
         </Button>
@@ -295,7 +314,11 @@ export function SettingsPage({ onBack }: Props) {
                     size="icon"
                     className="h-7 w-7 text-destructive hover:text-destructive"
                     onClick={() =>
-                      setDeleteTarget({ type: 'profile', profileId: profile.id, name: profile.name })
+                      setDeleteTarget({
+                        type: 'profile',
+                        profileId: profile.id,
+                        name: profile.name,
+                      })
                     }
                     tooltip="Delete profile"
                   >
@@ -388,9 +411,7 @@ export function SettingsPage({ onBack }: Props) {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-sm">About</CardTitle>
-            <CardDescription className="text-xs">
-              Version {appVersion || '...'}
-            </CardDescription>
+            <CardDescription className="text-xs">Version {appVersion || '...'}</CardDescription>
           </CardHeader>
           <CardContent className="flex gap-2">
             <Button
@@ -400,7 +421,11 @@ export function SettingsPage({ onBack }: Props) {
               onClick={handleCheckUpdate}
               disabled={checkingUpdate}
             >
-              {checkingUpdate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {checkingUpdate ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
               Check for updates
             </Button>
             <Button
@@ -432,7 +457,13 @@ export function SettingsPage({ onBack }: Props) {
       />
 
       {/* Export warning dialog */}
-      <AlertDialog open={showExportWarning} onOpenChange={(v) => { setShowExportWarning(v); if (!v) setIncludeSecrets(false) }}>
+      <AlertDialog
+        open={showExportWarning}
+        onOpenChange={(v) => {
+          setShowExportWarning(v)
+          if (!v) setIncludeSecrets(false)
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Export Settings</AlertDialogTitle>

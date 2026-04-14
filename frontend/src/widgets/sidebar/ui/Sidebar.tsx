@@ -21,7 +21,9 @@ function readCollapsed(): boolean {
 
 interface Props {
   activeBrokerId?: string
-  onBrokerSelect?: (broker: { profileId: string; brokerId: string; brokerName: string } | null) => void
+  onBrokerSelect?: (
+    broker: { profileId: string; brokerId: string; brokerName: string } | null,
+  ) => void
 }
 
 export function Sidebar({ activeBrokerId, onBrokerSelect }: Props) {

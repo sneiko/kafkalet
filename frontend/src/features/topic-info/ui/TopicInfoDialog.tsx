@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 import { RefreshCw, Loader2, Pencil, Check, X } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { IconButton } from '@/shared/ui/icon-button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
-import { GetTopicMetadata, ListConsumerGroups, GetTopicConfig, AlterTopicConfig, type broker } from '@shared/api'
+import {
+  GetTopicMetadata,
+  ListConsumerGroups,
+  GetTopicConfig,
+  AlterTopicConfig,
+  type broker,
+} from '@shared/api'
 
 interface Props {
   profileId: string
@@ -65,7 +66,7 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
     try {
       await AlterTopicConfig(profileId, brokerId, topic, key, editingValue)
       setConfigs((prev) =>
-        prev.map((c) => (c.name === key ? { ...c, value: editingValue, isDefault: false } : c))
+        prev.map((c) => (c.name === key ? { ...c, value: editingValue, isDefault: false } : c)),
       )
       setEditingKey(null)
     } catch (err) {
@@ -110,12 +111,22 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
         <Tabs defaultValue="partitions">
           <TabsList className="w-full">
             <TabsTrigger value="partitions" className="flex-1">
-              Partitions {meta && <span className="ml-1 text-muted-foreground text-xs">({meta.partitions.length})</span>}
+              Partitions{' '}
+              {meta && (
+                <span className="ml-1 text-muted-foreground text-xs">
+                  ({meta.partitions.length})
+                </span>
+              )}
             </TabsTrigger>
             <TabsTrigger value="groups" className="flex-1">
-              Groups {groups.length > 0 && <span className="ml-1 text-muted-foreground text-xs">({groups.length})</span>}
+              Groups{' '}
+              {groups.length > 0 && (
+                <span className="ml-1 text-muted-foreground text-xs">({groups.length})</span>
+              )}
             </TabsTrigger>
-            <TabsTrigger value="config" className="flex-1">Config</TabsTrigger>
+            <TabsTrigger value="config" className="flex-1">
+              Config
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="partitions">
@@ -134,14 +145,18 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
                     <tr key={p.partition} className="border-b border-border/40">
                       <td className="py-1 tabular-nums">{p.partition}</td>
                       <td className="py-1 tabular-nums">{p.leader}</td>
-                      <td className="py-1 font-mono text-muted-foreground">{p.replicas.join(', ')}</td>
+                      <td className="py-1 font-mono text-muted-foreground">
+                        {p.replicas.join(', ')}
+                      </td>
                       <td className="py-1 font-mono text-muted-foreground">{p.isr.join(', ')}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             )}
-            {!loading && !meta && <p className="text-xs text-muted-foreground mt-2">No partition data.</p>}
+            {!loading && !meta && (
+              <p className="text-xs text-muted-foreground mt-2">No partition data.</p>
+            )}
           </TabsContent>
 
           <TabsContent value="groups">
@@ -170,9 +185,15 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
                       {g.partitions.map((p) => (
                         <tr key={p.partition} className="border-b border-border/40">
                           <td className="py-1 tabular-nums">{p.partition}</td>
-                          <td className="py-1 text-right tabular-nums text-muted-foreground">{p.commitOffset}</td>
-                          <td className="py-1 text-right tabular-nums text-muted-foreground">{p.logEndOffset}</td>
-                          <td className={`py-1 text-right tabular-nums ${p.lag > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+                          <td className="py-1 text-right tabular-nums text-muted-foreground">
+                            {p.commitOffset}
+                          </td>
+                          <td className="py-1 text-right tabular-nums text-muted-foreground">
+                            {p.logEndOffset}
+                          </td>
+                          <td
+                            className={`py-1 text-right tabular-nums ${p.lag > 0 ? 'text-yellow-500' : 'text-green-500'}`}
+                          >
                             {p.lag}
                           </td>
                         </tr>
@@ -182,7 +203,9 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
                 </div>
               ))
             ) : (
-              <p className="mt-2 text-xs text-muted-foreground">No consumer groups found for this topic.</p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                No consumer groups found for this topic.
+              </p>
             )}
           </TabsContent>
 

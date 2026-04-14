@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 )
 
 const defaultMaxEntries = 500
@@ -33,7 +34,7 @@ type lruEntry struct {
 func New(url, username, password string) *Registry {
 	r := &Registry{
 		url:        url,
-		client:     &http.Client{},
+		client:     &http.Client{Timeout: 30 * time.Second},
 		cache:      make(map[int32]*list.Element),
 		evictList:  list.New(),
 		maxEntries: defaultMaxEntries,

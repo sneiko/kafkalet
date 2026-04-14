@@ -2,12 +2,7 @@ import { useEffect, useState } from 'react'
 import { RefreshCw, Loader2, ChevronRight, ChevronDown, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +16,12 @@ import {
 import { IconButton } from '@/shared/ui/icon-button'
 import { GroupStateBadge } from '@entities/consumer-group'
 import type { GroupSummary, GroupDetail, GroupMemberInfo } from '@entities/consumer-group'
-import { ListAllConsumerGroups, GetConsumerGroupDetail, DescribeConsumerGroupMembers, DeleteConsumerGroup } from '@shared/api'
+import {
+  ListAllConsumerGroups,
+  GetConsumerGroupDetail,
+  DescribeConsumerGroupMembers,
+  DeleteConsumerGroup,
+} from '@shared/api'
 
 interface Props {
   profileId: string
@@ -31,7 +31,13 @@ interface Props {
   onOpenChange: (open: boolean) => void
 }
 
-export function ConsumerGroupsDialog({ profileId, brokerId, brokerName, open, onOpenChange }: Props) {
+export function ConsumerGroupsDialog({
+  profileId,
+  brokerId,
+  brokerName,
+  open,
+  onOpenChange,
+}: Props) {
   const [groups, setGroups] = useState<GroupSummary[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -122,7 +128,9 @@ export function ConsumerGroupsDialog({ profileId, brokerId, brokerName, open, on
         {error && <p className="text-sm text-destructive">{error}</p>}
 
         {!loading && groups.length === 0 && !error && (
-          <p className="py-4 text-center text-sm text-muted-foreground">No consumer groups found.</p>
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            No consumer groups found.
+          </p>
         )}
 
         {groups.length > 0 && (
@@ -169,7 +177,8 @@ export function ConsumerGroupsDialog({ profileId, brokerId, brokerName, open, on
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Consumer Group</AlertDialogTitle>
             <AlertDialogDescription>
-              Delete consumer group <span className="font-mono">{deleteTarget}</span>? This action cannot be undone.
+              Delete consumer group <span className="font-mono">{deleteTarget}</span>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -245,7 +254,9 @@ function DialogGroupRow({
         <td className="py-1">
           <GroupStateBadge state={group.state} />
         </td>
-        <td className={`py-1 text-right tabular-nums ${group.totalLag > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+        <td
+          className={`py-1 text-right tabular-nums ${group.totalLag > 0 ? 'text-yellow-500' : 'text-green-500'}`}
+        >
           {group.totalLag.toLocaleString()}
         </td>
         <td className="py-1 text-center">
@@ -314,7 +325,9 @@ function DialogGroupRow({
                                 <td className="py-0.5 text-right tabular-nums text-muted-foreground">
                                   {p.logEndOffset}
                                 </td>
-                                <td className={`py-0.5 text-right tabular-nums ${p.lag > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                <td
+                                  className={`py-0.5 text-right tabular-nums ${p.lag > 0 ? 'text-yellow-500' : 'text-green-500'}`}
+                                >
                                   {p.lag}
                                 </td>
                               </tr>

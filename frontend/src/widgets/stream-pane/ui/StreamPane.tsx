@@ -135,15 +135,14 @@ function StreamPaneInner() {
           {session.mode === 'consumer' ? `group: ${session.groupId}` : session.startOffset}
         </span>
         <span className="ml-1 tabular-nums text-muted-foreground/60">
-          ({hasFilter ? `${messages.length}/` : ''}{allMessages.length.toLocaleString()})
+          ({hasFilter ? `${messages.length}/` : ''}
+          {allMessages.length.toLocaleString()})
         </span>
 
         {commitResult && (
           <span
             className={
-              commitResult.startsWith('✓')
-                ? 'text-green-500 ml-1'
-                : 'text-destructive ml-1'
+              commitResult.startsWith('✓') ? 'text-green-500 ml-1' : 'text-destructive ml-1'
             }
           >
             {commitResult}

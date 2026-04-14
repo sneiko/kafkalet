@@ -16,7 +16,12 @@ import {
 } from '@/shared/ui/alert-dialog'
 import { GroupStateBadge } from '@entities/consumer-group'
 import type { GroupSummary, GroupDetail, GroupMemberInfo } from '@entities/consumer-group'
-import { ListAllConsumerGroups, GetConsumerGroupDetail, DescribeConsumerGroupMembers, DeleteConsumerGroup } from '@shared/api'
+import {
+  ListAllConsumerGroups,
+  GetConsumerGroupDetail,
+  DescribeConsumerGroupMembers,
+  DeleteConsumerGroup,
+} from '@shared/api'
 
 interface Props {
   profileId: string
@@ -85,9 +90,7 @@ export function ConsumerGroupsTab({ profileId, brokerId }: Props) {
     }
   }
 
-  const filtered = groups.filter((g) =>
-    g.groupId.toLowerCase().includes(search.toLowerCase())
-  )
+  const filtered = groups.filter((g) => g.groupId.toLowerCase().includes(search.toLowerCase()))
 
   return (
     <div className="flex flex-col h-full">
@@ -128,7 +131,9 @@ export function ConsumerGroupsTab({ profileId, brokerId }: Props) {
             Loading consumer groups...
           </div>
         ) : !loading && groups.length === 0 && !error ? (
-          <p className="py-8 text-center text-xs text-muted-foreground">No consumer groups found.</p>
+          <p className="py-8 text-center text-xs text-muted-foreground">
+            No consumer groups found.
+          </p>
         ) : filtered.length > 0 ? (
           <table className="w-full text-xs">
             <thead className="sticky top-0 bg-background z-10">
@@ -175,7 +180,8 @@ export function ConsumerGroupsTab({ profileId, brokerId }: Props) {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Consumer Group</AlertDialogTitle>
             <AlertDialogDescription>
-              Delete consumer group <span className="font-mono">{deleteTarget}</span>? This action cannot be undone.
+              Delete consumer group <span className="font-mono">{deleteTarget}</span>? This action
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -251,7 +257,9 @@ function GroupRow({
         <td className="py-1">
           <GroupStateBadge state={group.state} />
         </td>
-        <td className={`py-1 text-right tabular-nums ${group.totalLag > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+        <td
+          className={`py-1 text-right tabular-nums ${group.totalLag > 0 ? 'text-yellow-500' : 'text-green-500'}`}
+        >
           {group.totalLag.toLocaleString()}
         </td>
         <td className="py-1 text-center">
@@ -320,7 +328,9 @@ function GroupRow({
                                 <td className="py-0.5 text-right tabular-nums text-muted-foreground">
                                   {p.logEndOffset}
                                 </td>
-                                <td className={`py-0.5 text-right tabular-nums ${p.lag > 0 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                <td
+                                  className={`py-0.5 text-right tabular-nums ${p.lag > 0 ? 'text-yellow-500' : 'text-green-500'}`}
+                                >
                                   {p.lag}
                                 </td>
                               </tr>

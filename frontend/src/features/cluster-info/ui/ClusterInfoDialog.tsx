@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
 import { RefreshCw, Loader2, ShieldCheck, ChevronRight, ChevronDown } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { IconButton } from '@/shared/ui/icon-button'
 import { Badge } from '@/shared/ui/badge'
 import { GetClusterInfo, type broker } from '@shared/api'

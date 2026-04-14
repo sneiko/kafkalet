@@ -51,8 +51,7 @@ export const useSessionStore = create<SessionState>((set) => ({
       const session = state.sessions[sessionId]
       if (!session) return state
       const prev = session.messages
-      const messages =
-        prev.length >= MAX_MESSAGES ? [...prev.slice(1), msg] : [...prev, msg]
+      const messages = prev.length >= MAX_MESSAGES ? [...prev.slice(1), msg] : [...prev, msg]
       return {
         sessions: { ...state.sessions, [sessionId]: { ...session, messages } },
       }

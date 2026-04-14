@@ -98,22 +98,17 @@ export function SearchResultsPane({ sessionId }: { sessionId: string }) {
         <span className="text-muted-foreground">{session.brokerName}</span>
         <span className="text-muted-foreground">·</span>
         <span className="text-muted-foreground">
-          Scanned: {scanned.toLocaleString()}{totalEst > 0 && ` / ${totalEst.toLocaleString()}`}
+          Scanned: {scanned.toLocaleString()}
+          {totalEst > 0 && ` / ${totalEst.toLocaleString()}`}
         </span>
         <span className="text-muted-foreground">·</span>
         <span className="text-foreground/70 font-medium">
           Matches: {matches.length.toLocaleString()}
         </span>
 
-        {!isDone && (
-          <span className="text-primary font-medium ml-1">{pct}%</span>
-        )}
-        {isDone && (
-          <span className="text-green-500 ml-1">Done</span>
-        )}
-        {progress?.error && (
-          <span className="text-destructive ml-1">{progress.error}</span>
-        )}
+        {!isDone && <span className="text-primary font-medium ml-1">{pct}%</span>}
+        {isDone && <span className="text-green-500 ml-1">Done</span>}
+        {progress?.error && <span className="text-destructive ml-1">{progress.error}</span>}
 
         <div className="flex-1" />
 

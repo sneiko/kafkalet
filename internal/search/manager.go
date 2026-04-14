@@ -52,6 +52,15 @@ func (m *Manager) Stop(sessionID string) {
 	if s, ok := m.sessions[sessionID]; ok {
 		s.Stop()
 		delete(m.sessions, sessionID)
+		// Clean up brokerSessions to prevent stale ID accumulation.
+		for bid, sids := range m.brokerSessions {
+			for i, sid := range sids {
+				if sid == sessionID {
+					m.brokerSessions[bid] = append(sids[:i], sids[i+1:]...)
+					break
+				}
+			}
+		}
 	}
 }
 

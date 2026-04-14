@@ -42,8 +42,7 @@ export const useSearchStore = create<SearchState>((set) => ({
       const session = state.sessions[sessionId]
       if (!session) return state
       const prev = session.matches
-      const matches =
-        prev.length >= MAX_MATCHES ? [...prev.slice(1), match] : [...prev, match]
+      const matches = prev.length >= MAX_MATCHES ? [...prev.slice(1), match] : [...prev, match]
       return {
         sessions: { ...state.sessions, [sessionId]: { ...session, matches } },
       }

@@ -1,6 +1,10 @@
 package search
 
-import "time"
+import (
+	"time"
+
+	"kafkalet/internal/message"
+)
 
 // SearchRequest describes what and how to search in a Kafka topic.
 type SearchRequest struct {
@@ -32,11 +36,5 @@ type SearchMatch struct {
 	Key       string    `json:"key"`
 	Value     string    `json:"value"`
 	Timestamp time.Time `json:"timestamp"`
-	Headers   []Header  `json:"headers"`
-}
-
-// Header is a single Kafka record header.
-type Header struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
+	Headers   []message.Header `json:"headers"`
 }

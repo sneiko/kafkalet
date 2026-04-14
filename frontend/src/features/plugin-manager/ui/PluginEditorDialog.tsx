@@ -5,21 +5,8 @@ import { z } from 'zod'
 import { Play, Loader2 } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/shared/ui/form'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/shared/ui/form'
 import { Input } from '@/shared/ui/input'
 import { Separator } from '@/shared/ui/separator'
 
@@ -88,11 +75,9 @@ export function PluginEditorDialog({ plugin, open, onOpenChange }: Props) {
 
   const handleTest = () => {
     const values = form.getValues()
-    const result = applyPlugin(
-      { value: testInput, key: '', headers: [] },
-      'test-topic',
-      [{ id: 'test', name: 'test', topicPattern: 'test-topic', script: values.script }],
-    )
+    const result = applyPlugin({ value: testInput, key: '', headers: [] }, 'test-topic', [
+      { id: 'test', name: 'test', topicPattern: 'test-topic', script: values.script },
+    ])
     setTestOutput(result ?? '(no match)')
   }
 
@@ -173,7 +158,13 @@ export function PluginEditorDialog({ plugin, open, onOpenChange }: Props) {
                     placeholder='{"key":"value"}'
                   />
                 </div>
-                <Button type="button" variant="outline" size="sm" className="h-8" onClick={handleTest}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={handleTest}
+                >
                   <Play className="h-3 w-3" />
                   Run
                 </Button>

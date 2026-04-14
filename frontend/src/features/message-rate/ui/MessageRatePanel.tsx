@@ -17,25 +17,26 @@ export function MessageRatePanel({ profileId, brokerId }: Props) {
     const eventName = `rate:${brokerId}`
     let cancelled = false
 
-    StartRateWatcher(profileId, brokerId).then(() => {
-      if (cancelled) return
-      EventsOn(eventName, (snap: RateSnapshot) => {
-        if (snap?.topics) {
-          const sorted = [...snap.topics].sort((a, b) => b.messagesPerSec - a.messagesPerSec)
-          setRates(sorted)
-          setWaiting(false)
-        }
+    StartRateWatcher(profileId, brokerId)
+      .then(() => {
+        if (cancelled) return
+        EventsOn(eventName, (snap: RateSnapshot) => {
+          if (snap?.topics) {
+            const sorted = [...snap.topics].sort((a, b) => b.messagesPerSec - a.messagesPerSec)
+            setRates(sorted)
+            setWaiting(false)
+          }
+        })
       })
-    }).catch(() => {
-      // ignore — no data
-    })
+      .catch(() => {
+        // ignore — no data
+      })
 
     return () => {
       cancelled = true
       EventsOff(eventName)
       StopRateWatcher(brokerId)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileId, brokerId])
 
   if (waiting) {

@@ -1,5 +1,32 @@
+# OS
 .DS_Store
+Thumbs.db
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Claude
 .claude/
 CLAUDE.md
 docs/*
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Wails build output
 build/bin/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Environment / secrets
+.env
+.env.*

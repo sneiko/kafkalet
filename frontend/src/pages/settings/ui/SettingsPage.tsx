@@ -32,6 +32,7 @@ import {
   RenameProfile,
   ExportSettings,
   ImportSettings,
+  ListProfiles,
   GetAppVersion,
   CheckForUpdates,
   OpenURL,
@@ -52,7 +53,7 @@ interface Props {
 }
 
 export function SettingsPage({ onBack }: Props) {
-  const { profiles, activeProfileId, upsertProfile, removeProfile, setActiveProfileId } =
+  const { profiles, activeProfileId, upsertProfile, removeProfile, setActiveProfileId, setProfiles } =
     useProfileStore()
 
   const [newProfileName, setNewProfileName] = useState('')
@@ -171,6 +172,8 @@ export function SettingsPage({ onBack }: Props) {
     setImporting(true)
     try {
       await ImportSettings()
+      const all = await ListProfiles()
+      setProfiles(all ?? [])
       toast.success('Settings imported')
     } catch (err) {
       toast.error('Import failed', { description: String(err) })

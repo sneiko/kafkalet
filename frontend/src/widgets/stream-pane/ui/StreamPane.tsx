@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Square, Trash2, CheckCheck, Loader2, Filter, Download, SendHorizonal } from 'lucide-react'
+import { Square, Trash2, CheckCheck, Loader2, Download, SendHorizonal } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import { IconButton } from '@/shared/ui/icon-button'
@@ -15,16 +15,24 @@ import { useSessionStore } from '@entities/session'
 import { useSearchStore } from '@entities/search'
 import { SearchResultsPane } from '@features/topic-search'
 import { MessageRow, MessageDetailDialog } from '@entities/message'
-import type { KafkaMessage } from '@entities/message'
-import { FilterBar, applyFilter } from '@features/message-filter'
-import type { FilterState } from '@features/message-filter'
+import type { KafkaMessage, SortField } from '@entities/message'
+import { applyColumnFilter, DEFAULT_SORT, EMPTY_COLUMN_FILTER } from '@entities/message'
+import { ColumnHeader } from '@features/message-column-header'
 import { exportAsJson, exportAsCsv } from '@shared/lib/exportMessages'
 import { usePluginStore } from '@entities/plugin'
 import { applyPlugin } from '@shared/lib/applyPlugin'
 import { ProduceDialog } from '@features/message-produce'
 
 const ROW_HEIGHT = 36
-const LS_FILTER_VISIBLE = 'filter-visible'
+
+const COLUMNS: Array<{ field: SortField; label: string }> = [
+  { field: 'partition-offset', label: '#Offset' },
+  { field: 'timestamp', label: 'Timestamp' },
+  { field: 'key', label: 'Key' },
+  { field: 'value', label: 'Value' },
+]
+
+const GRID_TEMPLATE = '104px 148px 168px 1fr'
 
 export function StreamPane() {
   const activeSearchId = useSearchStore((s) => s.activeSearchId)
@@ -37,24 +45,27 @@ export function StreamPane() {
 }
 
 function StreamPaneInner() {
-  const { sessions, activeSessionId, appendMessage, removeSession, clearMessages } =
+  const { sessions, activeSessionId, mergeMessages, removeSession, clearMessages } =
     useSessionStore()
   const plugins = usePluginStore((s) => s.plugins)
 
   const session = activeSessionId ? sessions[activeSessionId] : null
+  const topic = session?.topic ?? ''
+
+  const sort = useSessionStore((s) => (topic ? s.getSort(topic) : DEFAULT_SORT))
+  const filter = useSessionStore((s) => (topic ? s.getFilter(topic) : EMPTY_COLUMN_FILTER))
+  const setSort = useSessionStore((s) => s.setSort)
+  const setFilter = useSessionStore((s) => s.setFilter)
+
   const allMessages = session?.messages ?? []
 
   const [committing, setCommitting] = useState(false)
   const [commitResult, setCommitResult] = useState<string | null>(null)
-  const [filterVisible, setFilterVisible] = useState(
-    () => localStorage.getItem(LS_FILTER_VISIBLE) === 'true',
-  )
-  const [filter, setFilter] = useState<FilterState>({ key: '', value: '' })
   const [selectedMessage, setSelectedMessage] = useState<KafkaMessage | null>(null)
   const [selectedDecoded, setSelectedDecoded] = useState<string | null>(null)
   const [produceOpen, setProduceOpen] = useState(false)
 
-  const messages = applyFilter(allMessages, filter)
+  const messages = applyColumnFilter(allMessages, filter)
 
   const parentRef = useRef<HTMLDivElement>(null)
 
@@ -65,21 +76,55 @@ function StreamPaneInner() {
     overscan: 15,
   })
 
-  // Auto-scroll to bottom when new messages arrive (only if no filter active)
-  useEffect(() => {
-    if (messages.length > 0 && !filter.key && !filter.value) {
-      virtualizer.scrollToIndex(messages.length - 1, { behavior: 'auto' })
-    }
-  }, [allMessages.length])
+  // Auto-scroll when new messages arrive. Anchor depends on the primary sort:
+  // asc keeps newest at the tail, desc at the head. Key/value sorts have no
+  // predictable "newest" position so we don't move the viewport.
+  const primary = sort[0] ?? DEFAULT_SORT[0]
+  const anchorsTail =
+    (primary.field === 'partition-offset' || primary.field === 'timestamp') &&
+    primary.direction === 'asc'
+  const anchorsHead =
+    (primary.field === 'partition-offset' || primary.field === 'timestamp') &&
+    primary.direction === 'desc'
 
-  // Subscribe to Wails events for the active session
+  useEffect(() => {
+    if (messages.length === 0) return
+    if (anchorsTail) {
+      virtualizer.scrollToIndex(messages.length - 1, { behavior: 'auto' })
+    } else if (anchorsHead) {
+      virtualizer.scrollToIndex(0, { behavior: 'auto' })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allMessages.length, anchorsTail, anchorsHead])
+
+  // RAF-batched merge to keep sort cost amortized under high throughput.
   useEffect(() => {
     if (!activeSessionId) return
     setCommitResult(null)
-    return EventsOn(`stream:${activeSessionId}`, (msg: KafkaMessage) => {
-      appendMessage(activeSessionId, msg)
+
+    const pending: KafkaMessage[] = []
+    let rafHandle: number | null = null
+
+    const flush = () => {
+      rafHandle = null
+      if (pending.length === 0) return
+      const batch = pending.splice(0, pending.length)
+      mergeMessages(activeSessionId, batch)
+    }
+
+    const unsubscribe = EventsOn(`stream:${activeSessionId}`, (msg: KafkaMessage) => {
+      pending.push(msg)
+      if (rafHandle == null) {
+        rafHandle = requestAnimationFrame(flush)
+      }
     })
-  }, [activeSessionId])
+
+    return () => {
+      unsubscribe()
+      if (rafHandle != null) cancelAnimationFrame(rafHandle)
+      if (pending.length > 0) mergeMessages(activeSessionId, pending)
+    }
+  }, [activeSessionId, mergeMessages])
 
   const handleStop = async () => {
     if (!activeSessionId) return
@@ -106,13 +151,6 @@ function StreamPaneInner() {
     }
   }
 
-  const toggleFilter = () => {
-    const next = !filterVisible
-    setFilterVisible(next)
-    localStorage.setItem(LS_FILTER_VISIBLE, String(next))
-    if (!next) setFilter({ key: '', value: '' })
-  }
-
   if (!session) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -121,7 +159,7 @@ function StreamPaneInner() {
     )
   }
 
-  const hasFilter = Boolean(filter.key || filter.value)
+  const hasFilter = messages.length !== allMessages.length
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
@@ -151,16 +189,6 @@ function StreamPaneInner() {
         )}
 
         <div className="flex-1" />
-
-        <IconButton
-          variant={filterVisible ? 'secondary' : 'ghost'}
-          size="icon"
-          className="h-6 w-6"
-          onClick={toggleFilter}
-          tooltip="Toggle filter (regex)"
-        >
-          <Filter className="h-3.5 w-3.5" />
-        </IconButton>
 
         <IconButton
           variant="ghost"
@@ -232,18 +260,22 @@ function StreamPaneInner() {
         </IconButton>
       </div>
 
-      {/* Filter bar */}
-      {filterVisible && <FilterBar filter={filter} onChange={setFilter} />}
-
-      {/* Column header */}
+      {/* Column header with per-column filter + sort */}
       <div
-        className="grid text-[10px] text-muted-foreground border-b border-border/60 px-3 py-1 shrink-0"
-        style={{ gridTemplateColumns: '104px 148px 168px 1fr' }}
+        className="grid border-b border-border/60 px-3 py-1 shrink-0 gap-2"
+        style={{ gridTemplateColumns: GRID_TEMPLATE }}
       >
-        <span>#Offset</span>
-        <span>Timestamp</span>
-        <span>Key</span>
-        <span>Value</span>
+        {COLUMNS.map((col) => (
+          <ColumnHeader
+            key={col.field}
+            label={col.label}
+            field={col.field}
+            sort={sort}
+            filter={filter}
+            onSortChange={(next) => setSort(session.topic, next)}
+            onFilterChange={(next) => setFilter(session.topic, next)}
+          />
+        ))}
       </div>
 
       {/* Virtualized message list */}

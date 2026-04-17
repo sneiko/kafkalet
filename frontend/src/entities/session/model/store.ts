@@ -1,5 +1,10 @@
 import { create } from 'zustand'
-import type { KafkaMessage } from '@entities/message'
+import type {
+  ColumnFilterState,
+  KafkaMessage,
+  SortState,
+} from '@entities/message'
+import { DEFAULT_SORT, EMPTY_COLUMN_FILTER, getComparator } from '@entities/message'
 
 const MAX_MESSAGES = 10_000
 
@@ -18,17 +23,54 @@ export interface StreamSession {
 interface SessionState {
   sessions: Record<string, StreamSession>
   activeSessionId: string | null
+  sortByTopic: Record<string, SortState>
+  filterByTopic: Record<string, ColumnFilterState>
 
   addSession: (s: Omit<StreamSession, 'messages'>) => void
   removeSession: (id: string) => void
-  appendMessage: (sessionId: string, msg: KafkaMessage) => void
+  mergeMessages: (sessionId: string, batch: KafkaMessage[]) => void
   setActiveSessionId: (id: string | null) => void
   clearMessages: (sessionId: string) => void
+  getSort: (topic: string) => SortState
+  setSort: (topic: string, sort: SortState) => void
+  getFilter: (topic: string) => ColumnFilterState
+  setFilter: (topic: string, filter: ColumnFilterState) => void
 }
 
-export const useSessionStore = create<SessionState>((set) => ({
+function mergeSorted(
+  existing: KafkaMessage[],
+  incoming: KafkaMessage[],
+  compare: (a: KafkaMessage, b: KafkaMessage) => number,
+): KafkaMessage[] {
+  const out: KafkaMessage[] = new Array(existing.length + incoming.length)
+  let i = 0
+  let j = 0
+  let k = 0
+  while (i < existing.length && j < incoming.length) {
+    out[k++] = compare(existing[i], incoming[j]) <= 0 ? existing[i++] : incoming[j++]
+  }
+  while (i < existing.length) out[k++] = existing[i++]
+  while (j < incoming.length) out[k++] = incoming[j++]
+  return out
+}
+
+function capMessages(messages: KafkaMessage[], sort: SortState): KafkaMessage[] {
+  if (messages.length <= MAX_MESSAGES) return messages
+  // Use the primary sort's direction to decide which end is "oldest" (arrival-wise).
+  // For asc (newest at tail) drop from the head; for desc drop from the tail.
+  // When no sort is explicitly set, behave like default (partition-offset asc).
+  const primary = sort[0]
+  const direction = primary ? primary.direction : 'asc'
+  return direction === 'asc'
+    ? messages.slice(messages.length - MAX_MESSAGES)
+    : messages.slice(0, MAX_MESSAGES)
+}
+
+export const useSessionStore = create<SessionState>((set, get) => ({
   sessions: {},
   activeSessionId: null,
+  sortByTopic: {},
+  filterByTopic: {},
 
   addSession: (s) =>
     set((state) => ({
@@ -46,15 +88,17 @@ export const useSessionStore = create<SessionState>((set) => ({
       }
     }),
 
-  appendMessage: (sessionId, msg) =>
+  mergeMessages: (sessionId, batch) =>
     set((state) => {
       const session = state.sessions[sessionId]
-      if (!session) return state
-      const prev = session.messages
-      const messages =
-        prev.length >= MAX_MESSAGES ? [...prev.slice(1), msg] : [...prev, msg]
+      if (!session || batch.length === 0) return state
+      const sort = state.sortByTopic[session.topic] ?? DEFAULT_SORT
+      const compare = getComparator(sort)
+      const sortedBatch = batch.slice().sort(compare)
+      const merged = mergeSorted(session.messages, sortedBatch, compare)
+      const capped = capMessages(merged, sort)
       return {
-        sessions: { ...state.sessions, [sessionId]: { ...session, messages } },
+        sessions: { ...state.sessions, [sessionId]: { ...session, messages: capped } },
       }
     }),
 
@@ -68,4 +112,34 @@ export const useSessionStore = create<SessionState>((set) => ({
         sessions: { ...state.sessions, [sessionId]: { ...session, messages: [] } },
       }
     }),
+
+  getSort: (topic) => get().sortByTopic[topic] ?? DEFAULT_SORT,
+
+  setSort: (topic, sort) =>
+    set((state) => {
+      const effective = sort.length === 0 ? DEFAULT_SORT : sort
+      const compare = getComparator(effective)
+      const nextSessions: Record<string, StreamSession> = {}
+      for (const [id, session] of Object.entries(state.sessions)) {
+        if (session.topic === topic && session.messages.length > 0) {
+          nextSessions[id] = {
+            ...session,
+            messages: session.messages.slice().sort(compare),
+          }
+        } else {
+          nextSessions[id] = session
+        }
+      }
+      return {
+        sortByTopic: { ...state.sortByTopic, [topic]: sort },
+        sessions: nextSessions,
+      }
+    }),
+
+  getFilter: (topic) => get().filterByTopic[topic] ?? EMPTY_COLUMN_FILTER,
+
+  setFilter: (topic, filter) =>
+    set((state) => ({
+      filterByTopic: { ...state.filterByTopic, [topic]: filter },
+    })),
 }))

@@ -84,11 +84,15 @@ export function SaveTopicGroup(arg1:string,arg2:string,arg3:profile.TopicGroup):
 
 export function SelectCertificateFile():Promise<string>;
 
+export function SelectTruststoreFile():Promise<string>;
+
 export function SetBrokerPassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SetNamedCredentialPassword(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function SetSchemaRegistryPassword(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function SetTruststorePassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function StartConsumer(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
 

@@ -72,6 +72,7 @@ sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libsecret-1-0
 **Authentication — everything covered**
 - SASL PLAIN · SCRAM-SHA-256/512 · OAUTHBEARER (static token & client credentials)
 - TLS server verification · mTLS mutual certificates
+- **JKS/PKCS12 truststore** — corporate Kafka with SSL/TLS certificate authorities
 - Passwords and tokens stored exclusively in the **OS keychain**
 
 **Topic organisation**
@@ -119,6 +120,35 @@ sudo apt-get install libgtk-3-0 libwebkit2gtk-4.0-37 libsecret-1-0
 | Linux | `~/.config/kafkalet/` |
 
 `profiles.json` stores broker addresses, SASL usernames, and TLS settings. Passwords are stored exclusively in the OS keychain and are **never** written to `profiles.json`.
+
+---
+
+## Connecting to Corporate Kafka
+
+kafkalet supports enterprise Kafka clusters with SASL authentication and JKS/PKCS12 truststores.
+
+**Example: Connecting to a corporate Kafka cluster**
+
+1. **Open Settings** (`Ctrl+,` on Windows/Linux, `⌘,` on macOS)
+2. **Add Broker** with the following configuration:
+   - **Name**: `corporate-kafka`
+   - **Bootstrap Servers**: `broker1.internal:9094, broker2.internal:9094, broker3.internal:9094`
+   - **Enable TLS**: ✓ checked
+   - **Truststore**: Select your `.jks` or `.pkcs12` file (e.g., `C:\cert\kafka\kafka-truststore.jks`)
+   - **Truststore Password**: Enter the truststore password (stored securely in OS keychain)
+   - **SASL Mechanism**: Select `SCRAM-SHA-512` (or your cluster's mechanism)
+   - **Username**: Your Kafka username (e.g., `kakfa-reader`)
+   - **Password**: Your Kafka password (stored securely in OS keychain)
+3. **Test Connection** to verify the configuration
+4. **Add Broker** to save
+
+**Requirements:**
+- Java JDK (for `keytool` command) OR OpenSSL (for PKCS12 conversion)
+- Truststore file in JKS or PKCS12 format
+- SASL credentials (username/password)
+
+**How it works:**
+kafkalet automatically converts your JKS/PKCS12 truststore to PEM format using `keytool` (preferred) or `openssl`, then uses the extracted CA certificates for TLS verification.
 
 ---
 

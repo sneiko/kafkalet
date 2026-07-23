@@ -18,6 +18,7 @@ import {
   AddBroker,
   UpdateBroker,
   SetSchemaRegistryPassword,
+  SetTruststorePassword,
   TestBrokerConnection,
   TestConnectionDirect,
   AddBrokerCredential,
@@ -53,10 +54,13 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       name: broker?.name ?? '',
       addresses: broker?.addresses.join(', ') ?? '',
       tlsEnabled: broker?.tls.enabled ?? false,
+      tlsUseTruststore: broker ? (broker.tls.truststorePath !== '') : false,
       tlsCaCertPath: broker?.tls.caCertPath ?? '',
       tlsClientCertPath: broker?.tls.clientCertPath ?? '',
       tlsClientKeyPath: broker?.tls.clientKeyPath ?? '',
       tlsInsecureSkipVerify: broker?.tls.insecureSkipVerify ?? false,
+      tlsTruststorePath: broker?.tls.truststorePath ?? '',
+      tlsTruststorePassword: '',
       srUrl: broker?.schemaRegistry?.url ?? '',
       srUsername: broker?.schemaRegistry?.username ?? '',
       srPassword: '',
@@ -77,10 +81,13 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         name: broker?.name ?? '',
         addresses: broker?.addresses.join(', ') ?? '',
         tlsEnabled: broker?.tls.enabled ?? false,
+        tlsUseTruststore: broker ? (broker.tls.truststorePath !== '') : false,
         tlsCaCertPath: broker?.tls.caCertPath ?? '',
         tlsClientCertPath: broker?.tls.clientCertPath ?? '',
         tlsClientKeyPath: broker?.tls.clientKeyPath ?? '',
         tlsInsecureSkipVerify: broker?.tls.insecureSkipVerify ?? false,
+        tlsTruststorePath: broker?.tls.truststorePath ?? '',
+        tlsTruststorePassword: '',
         srUrl: broker?.schemaRegistry?.url ?? '',
         srUsername: broker?.schemaRegistry?.username ?? '',
         srPassword: '',
@@ -120,9 +127,11 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       tls: {
         enabled: values.tlsEnabled,
         insecureSkipVerify: values.tlsInsecureSkipVerify,
-        caCertPath: values.tlsCaCertPath,
-        clientCertPath: values.tlsClientCertPath,
-        clientKeyPath: values.tlsClientKeyPath,
+        caCertPath: values.tlsUseTruststore ? '' : values.tlsCaCertPath,
+        clientCertPath: values.tlsUseTruststore ? '' : values.tlsClientCertPath,
+        clientKeyPath: values.tlsUseTruststore ? '' : values.tlsClientKeyPath,
+        truststorePath: values.tlsUseTruststore ? values.tlsTruststorePath : '',
+        truststorePassword: values.tlsUseTruststore ? values.tlsTruststorePassword : '',
       },
       schemaRegistry: {
         url: values.srUrl.trim(),
@@ -141,8 +150,12 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         savedBroker = await AddBroker(profileId, brokerData as unknown as profile.Broker) as unknown as Broker
       }
 
-      if (values.srPassword) {
+if (values.srPassword) {
         await SetSchemaRegistryPassword(profileId, savedBroker.id, values.srPassword)
+      }
+
+      if (values.tlsTruststorePassword) {
+        await SetTruststorePassword(profileId, savedBroker.id, values.tlsTruststorePassword)
       }
 
       // Add initial credential for new brokers (skip if no auth)

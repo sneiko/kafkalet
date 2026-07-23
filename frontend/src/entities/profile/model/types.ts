@@ -17,6 +17,8 @@ export interface TLSConfig {
   caCertPath: string
   clientCertPath: string
   clientKeyPath: string
+  truststorePath: string
+  truststorePassword: string
 }
 
 export interface NamedCredential {
@@ -63,6 +65,8 @@ export function emptyBroker(): Broker {
       caCertPath: '',
       clientCertPath: '',
       clientKeyPath: '',
+      truststorePath: '',
+      truststorePassword: '',
     },
   }
 }

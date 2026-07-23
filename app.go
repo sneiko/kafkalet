@@ -239,6 +239,7 @@ type exportBroker struct {
 	CACertPEM              string                       `json:"caCertPEM,omitempty"`
 	ClientCertPEM          string                       `json:"clientCertPEM,omitempty"`
 	ClientKeyPEM           string                       `json:"clientKeyPEM,omitempty"`
+	TruststorePassword     string                       `json:"truststorePassword,omitempty"`
 }
 
 type exportCredential struct {
@@ -283,9 +284,11 @@ func (a *App) ExportSettings(includeSecrets bool) error {
 			eb.TLS.CACertPath = ""
 			eb.TLS.ClientCertPath = ""
 			eb.TLS.ClientKeyPath = ""
+			eb.TLS.TruststorePath = ""
 			if includeSecrets {
 				eb.SASLPassword, _ = profile.GetPassword(p.ID, b.ID)
 				eb.SchemaRegistryPassword, _ = profile.GetSchemaRegistryPassword(p.ID, b.ID)
+				eb.TruststorePassword, _ = profile.GetTruststorePassword(p.ID, b.ID)
 				if b.TLS.CACertPath != "" {
 					if pem, err := os.ReadFile(b.TLS.CACertPath); err == nil {
 						eb.CACertPEM = string(pem)
@@ -335,6 +338,17 @@ func (a *App) SelectCertificateFile() (string, error) {
 		Title: "Select Certificate File",
 		Filters: []runtime.FileFilter{
 			{DisplayName: "Certificates (*.pem, *.crt, *.cert, *.key)", Pattern: "*.pem;*.crt;*.cert;*.key"},
+			{DisplayName: "All Files", Pattern: "*"},
+		},
+	})
+}
+
+// SelectTruststoreFile opens a native file dialog for selecting truststore files (JKS/PKCS12).
+func (a *App) SelectTruststoreFile() (string, error) {
+	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select Truststore File",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Truststore Files (*.jks, *.pkcs12, *.p12)", Pattern: "*.jks;*.pkcs12;*.p12"},
 			{DisplayName: "All Files", Pattern: "*"},
 		},
 	})
@@ -421,6 +435,9 @@ func (a *App) ImportSettings() error {
 		for _, eb := range ep.Brokers {
 			if eb.SchemaRegistryPassword != "" {
 				_ = profile.SaveSchemaRegistryPassword(ep.ID, eb.ID, eb.SchemaRegistryPassword)
+			}
+			if eb.TruststorePassword != "" {
+				_ = profile.SaveTruststorePassword(ep.ID, eb.ID, eb.TruststorePassword)
 			}
 			for _, ec := range eb.Credentials {
 				if ec.Password != "" {
@@ -555,6 +572,9 @@ func (a *App) DeleteBroker(profileID, brokerID string) error {
 	if err := profile.DeletePassword(profileID, brokerID); err != nil {
 		runtime.LogWarningf(a.ctx, "delete broker password: %v", err)
 	}
+	if err := profile.DeleteTruststorePassword(profileID, brokerID); err != nil {
+		runtime.LogWarningf(a.ctx, "delete truststore password: %v", err)
+	}
 	return a.profileStore.DeleteBroker(profileID, brokerID)
 }
 
@@ -565,6 +585,11 @@ func (a *App) SetBrokerPassword(profileID, brokerID, password string) error {
 // SetSchemaRegistryPassword stores the Schema Registry HTTP Basic password in the OS keychain.
 func (a *App) SetSchemaRegistryPassword(profileID, brokerID, password string) error {
 	return profile.SaveSchemaRegistryPassword(profileID, brokerID, password)
+}
+
+// SetTruststorePassword stores the truststore password in the OS keychain.
+func (a *App) SetTruststorePassword(profileID, brokerID, password string) error {
+	return profile.SaveTruststorePassword(profileID, brokerID, password)
 }
 
 // AddBrokerCredential adds a named credential to a broker.
@@ -1034,6 +1059,14 @@ func (a *App) resolveBrokerAuth(profileID, brokerID string) (profile.Broker, str
 		return profile.Broker{}, "", err
 	}
 	bc := *b // work on a copy
+
+	// Load truststore password from keychain
+	if bc.TLS.TruststorePath != "" {
+		bc.TLS.TruststorePassword, err = profile.GetTruststorePassword(profileID, brokerID)
+		if err != nil {
+			return profile.Broker{}, "", fmt.Errorf("truststore password: %w", err)
+		}
+	}
 
 	if bc.ActiveCredentialID != "" {
 		for _, c := range bc.Credentials {

@@ -11,6 +11,7 @@ import { IconButton } from '@/shared/ui/icon-button'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/shared/ui/tooltip'
 import { Input } from '@/shared/ui/input'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
+import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
 import { GetTopicMetadata, ListConsumerGroups, GetTopicConfig, AlterTopicConfig, type broker } from '@shared/api'
 
 interface Props {
@@ -27,22 +28,19 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
   const [configs, setConfigs] = useState<broker.TopicConfigEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [configWarning, setConfigWarning] = useState<string | null>(null)
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [savingKey, setSavingKey] = useState<string | null>(null)
+  const [groupsLoaded, setGroupsLoaded] = useState(false)
 
-  const load = async () => {
+  const loadMetadata = async () => {
     setLoading(true)
     setError(null)
+    setConfigWarning(null)
     try {
-      const [m, g, c] = await Promise.all([
-        GetTopicMetadata(profileId, brokerId, topic),
-        ListConsumerGroups(profileId, brokerId, topic),
-        GetTopicConfig(profileId, brokerId, topic),
-      ])
+      const m = await GetTopicMetadata(profileId, brokerId, topic)
       setMeta(m)
-      setGroups(g ?? [])
-      setConfigs(c ?? [])
     } catch (err) {
       setError(String(err))
     } finally {
@@ -50,8 +48,39 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
     }
   }
 
+  const loadGroups = async () => {
+    if (groupsLoaded) return
+    try {
+      const g = await ListConsumerGroups(profileId, brokerId, topic)
+      setGroups(g ?? [])
+      setGroupsLoaded(true)
+    } catch (err) {
+      setError(String(err))
+    }
+  }
+
+  const loadConfigs = async () => {
+    if (configs.length > 0 || configWarning) return
+    
+    // Load config separately to handle authorization error
+    try {
+      const c = await GetTopicConfig(profileId, brokerId, topic)
+      setConfigs(c ?? [])
+    } catch (configErr) {
+      const configErrStr = String(configErr)
+      if (configErrStr.includes('TOPIC_AUTHORIZATION_FAILED')) {
+        setConfigWarning(
+          `Insufficient permissions to view topic configuration for "${topic}". Required ACL: DESCRIBE_CONFIGS`
+        )
+        setConfigs([])
+      } else {
+        setError(String(configErr))
+      }
+    }
+  }
+
   useEffect(() => {
-    if (open) load()
+    if (open) loadMetadata()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
@@ -92,7 +121,7 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
               variant="ghost"
               size="icon"
               className="ml-auto h-6 w-6"
-              onClick={load}
+              onClick={loadMetadata}
               disabled={loading}
               tooltip="Refresh"
             >
@@ -107,13 +136,41 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 
-        <Tabs defaultValue="partitions">
+{configWarning && (
+  <Alert variant="warning" className="mb-4">
+    <AlertTitle>Insufficient Access Permissions</AlertTitle>
+    <AlertDescription className="text-xs">
+      {configWarning}
+      <br /><br />
+      <strong>What to do:</strong>
+      <ul className="list-disc list-inside mt-2 space-y-1">
+        <li>Contact your Kafka cluster administrator</li>
+        <li>Request ACL permission: <code>DESCRIBE_CONFIGS</code> on the topic</li>
+        <li>Example command for administrator:
+          <pre className="bg-muted p-2 mt-1 rounded text-xs overflow-x-auto">
+{`kafka-acls --bootstrap-server <broker> \\
+  --command-config client.properties \\
+  --add \\
+  --allow-principal User:<username> \\
+  --operation DescribeConfigs \\
+  --topic "${topic}"`}
+          </pre>
+        </li>
+      </ul>
+    </AlertDescription>
+  </Alert>
+)}
+
+        <Tabs defaultValue="partitions" onValueChange={(value) => {
+            if (value === 'groups') loadGroups()
+            if (value === 'config') loadConfigs()
+          }}>
           <TabsList className="w-full">
             <TabsTrigger value="partitions" className="flex-1">
               Partitions {meta && <span className="ml-1 text-muted-foreground text-xs">({meta.partitions.length})</span>}
             </TabsTrigger>
             <TabsTrigger value="groups" className="flex-1">
-              Groups {groups.length > 0 && <span className="ml-1 text-muted-foreground text-xs">({groups.length})</span>}
+              Groups {groupsLoaded && groups.length > 0 && <span className="ml-1 text-muted-foreground text-xs">({groups.length})</span>}
             </TabsTrigger>
             <TabsTrigger value="config" className="flex-1">Config</TabsTrigger>
           </TabsList>
@@ -187,7 +244,11 @@ export function TopicInfoDialog({ profileId, brokerId, topic, open, onOpenChange
           </TabsContent>
 
           <TabsContent value="config">
-            {configs.length > 0 ? (
+            {configWarning ? (
+              <p className="text-xs text-muted-foreground mt-2">
+                Configuration is unavailable due to insufficient access permissions.
+              </p>
+            ) : configs.length > 0 ? (
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border text-muted-foreground">

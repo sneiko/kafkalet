@@ -5,10 +5,13 @@ export const baseSchema = z.object({
   name: z.string().min(1, 'Required'),
   addresses: z.string().min(1, 'Required'),
   tlsEnabled: z.boolean(),
+  tlsUseTruststore: z.boolean(),
   tlsCaCertPath: z.string(),
   tlsClientCertPath: z.string(),
   tlsClientKeyPath: z.string(),
   tlsInsecureSkipVerify: z.boolean(),
+  tlsTruststorePath: z.string(),
+  tlsTruststorePassword: z.string(),
   srUrl: z.string(),
   srUsername: z.string(),
   srPassword: z.string(),
@@ -60,10 +63,13 @@ export type CredFormValues = z.infer<typeof credSchema>
 export function buildTestParams(values: {
   addresses: string
   tlsEnabled: boolean
+  tlsUseTruststore: boolean
   tlsCaCertPath: string
   tlsClientCertPath: string
   tlsClientKeyPath: string
   tlsInsecureSkipVerify: boolean
+  tlsTruststorePath: string
+  tlsTruststorePassword: string
   initialCredMechanism: string
   initialCredUsername: string
   initialCredPassword: string
@@ -74,7 +80,15 @@ export function buildTestParams(values: {
 }) {
   const addresses = values.addresses.split(',').map((s) => s.trim()).filter(Boolean)
   const mechanism = values.initialCredMechanism
-  const tls = { enabled: values.tlsEnabled, insecureSkipVerify: values.tlsInsecureSkipVerify, caCertPath: values.tlsCaCertPath, clientCertPath: values.tlsClientCertPath, clientKeyPath: values.tlsClientKeyPath } as unknown as profile.TLSConfig
+  const tls = { 
+    enabled: values.tlsEnabled, 
+    insecureSkipVerify: values.tlsInsecureSkipVerify, 
+    caCertPath: values.tlsUseTruststore ? '' : values.tlsCaCertPath, 
+    clientCertPath: values.tlsUseTruststore ? '' : values.tlsClientCertPath, 
+    clientKeyPath: values.tlsUseTruststore ? '' : values.tlsClientKeyPath,
+    truststorePath: values.tlsUseTruststore ? values.tlsTruststorePath : '',
+    truststorePassword: values.tlsTruststorePassword
+  } as unknown as profile.TLSConfig
   if (mechanism === 'NONE') {
     const sasl = { mechanism: '', username: '', oauthTokenURL: '', oauthClientID: '', oauthScopes: [] } as unknown as profile.SASLConfig
     return { addresses, tls, sasl, password: '' }

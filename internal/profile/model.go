@@ -66,4 +66,6 @@ type TLSConfig struct {
 	CACertPath         string `json:"caCertPath"`
 	ClientCertPath     string `json:"clientCertPath"`
 	ClientKeyPath      string `json:"clientKeyPath"`
+	TruststorePath     string `json:"truststorePath"`     // JKS or PKCS12 file path
+	TruststorePassword string `json:"truststorePassword"` // stored in keychain
 }

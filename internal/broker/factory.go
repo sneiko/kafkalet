@@ -123,7 +123,18 @@ func buildTLS(cfg profile.TLSConfig) (*tls.Config, error) {
 		InsecureSkipVerify: cfg.InsecureSkipVerify, //nolint:gosec // user-controlled dev option
 	}
 
-	if cfg.CACertPath != "" {
+	// Truststore takes precedence over CA cert
+	if cfg.TruststorePath != "" {
+		pemPath, err := convertTruststoreToPEM(cfg.TruststorePath, cfg.TruststorePassword)
+		if err != nil {
+			return nil, fmt.Errorf("convert truststore: %w", err)
+		}
+		pool, err := loadTruststorePEM(pemPath)
+		if err != nil {
+			return nil, err
+		}
+		tlsCfg.RootCAs = pool
+	} else if cfg.CACertPath != "" {
 		pem, err := os.ReadFile(cfg.CACertPath)
 		if err != nil {
 			return nil, fmt.Errorf("read CA cert: %w", err)

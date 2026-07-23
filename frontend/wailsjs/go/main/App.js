@@ -158,6 +158,10 @@ export function SelectCertificateFile() {
   return window['go']['main']['App']['SelectCertificateFile']();
 }
 
+export function SelectTruststoreFile() {
+  return window['go']['main']['App']['SelectTruststoreFile']();
+}
+
 export function SetBrokerPassword(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetBrokerPassword'](arg1, arg2, arg3);
 }
@@ -168,6 +172,10 @@ export function SetNamedCredentialPassword(arg1, arg2, arg3, arg4) {
 
 export function SetSchemaRegistryPassword(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetSchemaRegistryPassword'](arg1, arg2, arg3);
+}
+
+export function SetTruststorePassword(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SetTruststorePassword'](arg1, arg2, arg3);
 }
 
 export function StartConsumer(arg1, arg2, arg3, arg4, arg5) {

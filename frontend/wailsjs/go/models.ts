@@ -444,6 +444,8 @@ export namespace profile {
 	    caCertPath: string;
 	    clientCertPath: string;
 	    clientKeyPath: string;
+	    truststorePath: string;
+	    truststorePassword: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new TLSConfig(source);
@@ -456,6 +458,8 @@ export namespace profile {
 	        this.caCertPath = source["caCertPath"];
 	        this.clientCertPath = source["clientCertPath"];
 	        this.clientKeyPath = source["clientKeyPath"];
+	        this.truststorePath = source["truststorePath"];
+	        this.truststorePassword = source["truststorePassword"];
 	    }
 	}
 	export class SASLConfig {

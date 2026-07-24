@@ -137,7 +137,7 @@ kafkalet supports enterprise Kafka clusters with SASL authentication and JKS/PKC
    - **Truststore**: Select your `.jks` or `.pkcs12` file (e.g., `C:\cert\kafka\kafka-truststore.jks`)
    - **Truststore Password**: Enter the truststore password (stored securely in OS keychain)
    - **SASL Mechanism**: Select `SCRAM-SHA-512` (or your cluster's mechanism)
-   - **Username**: Your Kafka username (e.g., `kakfa-reader`)
+   - **Username**: Your Kafka username (e.g., `kafka-reader`)
    - **Password**: Your Kafka password (stored securely in OS keychain)
 3. **Test Connection** to verify the configuration
 4. **Add Broker** to save

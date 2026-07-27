@@ -119,13 +119,14 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
     }
 
     const addresses = values.addresses.split(',').map((s) => s.trim()).filter(Boolean)
+    const tlsEnabled = values.tlsEnabled || values.tlsUseTruststore
     const brokerData: Broker = {
       id: broker?.id ?? '',
       name: values.name,
       addresses,
       sasl: { mechanism: '', username: '' },
       tls: {
-        enabled: values.tlsEnabled,
+        enabled: tlsEnabled,
         insecureSkipVerify: values.tlsInsecureSkipVerify,
         caCertPath: values.tlsUseTruststore ? '' : values.tlsCaCertPath,
         clientCertPath: values.tlsUseTruststore ? '' : values.tlsClientCertPath,

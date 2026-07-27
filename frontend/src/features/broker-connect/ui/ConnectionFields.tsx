@@ -101,35 +101,35 @@ export function ConnectionFields({ form }: ConnectionFieldsProps) {
               Warning: Disabling certificate verification is insecure and should only be used for development.
             </p>
           )}
-        </div>
-      )}
 
-      <Separator />
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-        Truststore
-      </p>
+          <Separator className="my-3" />
 
-      <FormField
-        control={form.control}
-        name="tlsUseTruststore"
-        render={({ field }) => (
-          <FormItem className="flex items-center gap-2">
-            <FormControl>
-              <input
-                type="checkbox"
-                checked={field.value}
-                onChange={field.onChange}
-                className="h-4 w-4 rounded border-border"
-              />
-            </FormControl>
-            <FormLabel className="!mt-0">Use Truststore (JKS/PKCS12)</FormLabel>
-          </FormItem>
-        )}
-      />
+          <FormField
+            control={form.control}
+            name="tlsUseTruststore"
+            render={({ field }) => (
+              <FormItem className="flex items-center gap-2">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={(v) => {
+                      field.onChange(v)
+                      if (v) form.setValue('tlsEnabled', true)
+                    }}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                </FormControl>
+                <FormLabel className="!mt-0">Use Truststore (JKS/PKCS12)</FormLabel>
+              </FormItem>
+            )}
+          />
 
-      {form.watch('tlsUseTruststore') && (
-        <div className="space-y-2 pl-3 border-l-2 border-muted">
-          <TruststorePathField form={form} />
+          {form.watch('tlsUseTruststore') && (
+            <div className="space-y-2 pl-3 border-l-2 border-muted">
+              <TruststorePathField form={form} />
+            </div>
+          )}
         </div>
       )}
 

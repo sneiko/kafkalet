@@ -55,8 +55,13 @@ type PartitionCount struct {
 	Count     int64 `json:"count"`
 }
 
+// CountTopicMessagesOptions contains options for message counting.
+type CountTopicMessagesOptions struct {
+	AvailableOnly bool `json:"availableOnly"` // If true, returns endOffset - startOffset; otherwise returns endOffset
+}
+
 // CountTopicMessages returns the total message count and per-partition counts for a topic.
-func CountTopicMessages(ctx context.Context, client *kgo.Client, topic string) (TopicMessageCount, error) {
+func CountTopicMessages(ctx context.Context, client *kgo.Client, topic string, opts CountTopicMessagesOptions) (TopicMessageCount, error) {
 	adm := kadm.NewClient(client)
 
 	endOffsets, err := adm.ListEndOffsets(ctx, topic)
@@ -69,21 +74,55 @@ func CountTopicMessages(ctx context.Context, client *kgo.Client, topic string) (
 		Partitions: make([]PartitionCount, 0),
 	}
 
-	topicOffsets, ok := endOffsets[topic]
+	topicEndOffsets, ok := endOffsets[topic]
 	if !ok {
 		return result, nil
 	}
 
-	for partition, offset := range topicOffsets {
-		if offset.Err != nil {
-			continue
+	if opts.AvailableOnly {
+		startOffsets, err := adm.ListStartOffsets(ctx, topic)
+		if err != nil {
+			return TopicMessageCount{}, fmt.Errorf("list start offsets: %w", err)
 		}
-		pc := PartitionCount{
-			Partition: partition,
-			Count:     offset.Offset,
+
+		topicStartOffsets, ok := startOffsets[topic]
+		if !ok {
+			return result, nil
 		}
-		result.Partitions = append(result.Partitions, pc)
-		result.Total += offset.Offset
+
+		for partition, endOffset := range topicEndOffsets {
+			if endOffset.Err != nil {
+				continue
+			}
+			startOffset, exists := topicStartOffsets[partition]
+			if !exists || startOffset.Err != nil {
+				continue
+			}
+
+			count := endOffset.Offset - startOffset.Offset
+			if count < 0 {
+				count = 0
+			}
+
+			pc := PartitionCount{
+				Partition: partition,
+				Count:     count,
+			}
+			result.Partitions = append(result.Partitions, pc)
+			result.Total += count
+		}
+	} else {
+		for partition, endOffset := range topicEndOffsets {
+			if endOffset.Err != nil {
+				continue
+			}
+			pc := PartitionCount{
+				Partition: partition,
+				Count:     endOffset.Offset,
+			}
+			result.Partitions = append(result.Partitions, pc)
+			result.Total += endOffset.Offset
+		}
 	}
 
 	sort.Slice(result.Partitions, func(i, j int) bool {

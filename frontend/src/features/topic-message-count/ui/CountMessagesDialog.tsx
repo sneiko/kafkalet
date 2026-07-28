@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from '@/shared/ui/dialog'
 import { IconButton } from '@/shared/ui/icon-button'
+import { Switch } from '@/shared/ui/switch'
 import { GetTopicMessageCount, type broker } from '@shared/api'
 
 interface Props {
@@ -22,12 +23,13 @@ export function CountMessagesDialog({ profileId, brokerId, topic, open, onOpenCh
   const [count, setCount] = useState<broker.TopicMessageCount | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [availableOnly, setAvailableOnly] = useState(true)
 
   const loadCount = async () => {
     setLoading(true)
     setError(null)
     try {
-      const c = await GetTopicMessageCount(profileId, brokerId, topic)
+      const c = await GetTopicMessageCount(profileId, brokerId, topic, availableOnly)
       setCount(c)
     } catch (err) {
       setError(String(err))
@@ -41,7 +43,7 @@ export function CountMessagesDialog({ profileId, brokerId, topic, open, onOpenCh
       loadCount()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open, availableOnly])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -72,8 +74,21 @@ export function CountMessagesDialog({ profileId, brokerId, topic, open, onOpenCh
 
         {count && (
           <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="text-xs text-muted-foreground">
+                {availableOnly ? 'Available messages only' : 'Total messages written'}
+              </div>
+              <Switch
+                checked={availableOnly}
+                onCheckedChange={(v: boolean) => setAvailableOnly(v)}
+                aria-label="Toggle available messages only"
+              />
+            </div>
+
             <div className="p-3 bg-muted rounded-md">
-              <div className="text-xs text-muted-foreground">Total Messages</div>
+              <div className="text-xs text-muted-foreground">
+                {availableOnly ? 'Available Messages' : 'Total Messages Written'}
+              </div>
               <div className="text-2xl font-bold tabular-nums">
                 {count.total.toLocaleString()}
               </div>

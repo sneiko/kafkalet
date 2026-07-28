@@ -94,8 +94,8 @@ export function GetTopicConfig(arg1, arg2, arg3) {
   return window['go']['main']['App']['GetTopicConfig'](arg1, arg2, arg3);
 }
 
-export function GetTopicMessageCount(arg1, arg2, arg3) {
-  return window['go']['main']['App']['GetTopicMessageCount'](arg1, arg2, arg3);
+export function GetTopicMessageCount(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['GetTopicMessageCount'](arg1, arg2, arg3, arg4);
 }
 
 export function GetTopicMetadata(arg1, arg2, arg3) {

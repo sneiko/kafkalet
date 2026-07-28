@@ -887,13 +887,14 @@ func (a *App) AlterTopicConfig(profileID, brokerID, topicName, key, value string
 }
 
 // GetTopicMessageCount returns the total message count and per-partition counts for a topic.
-func (a *App) GetTopicMessageCount(profileID, brokerID, topic string) (broker.TopicMessageCount, error) {
+// availableOnly: if true, returns endOffset - startOffset (available messages); otherwise returns endOffset (total written)
+func (a *App) GetTopicMessageCount(profileID, brokerID, topic string, availableOnly bool) (broker.TopicMessageCount, error) {
 	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
 	if err != nil {
 		return broker.TopicMessageCount{}, err
 	}
 	defer cancel()
-	return broker.CountTopicMessages(ctx, client, topic)
+	return broker.CountTopicMessages(ctx, client, topic, broker.CountTopicMessagesOptions{AvailableOnly: availableOnly})
 }
 
 // ── Stream sessions ───────────────────────────────────────────────────────────

@@ -1,4 +1,4 @@
-package broker
+package tlsutil
 
 import (
 	"crypto/x509"
@@ -12,16 +12,16 @@ import (
 	"syscall"
 )
 
-// convertTruststoreToPEM converts a JKS or PKCS12 truststore to PEM format.
+// ConvertTruststoreToPEM converts a JKS or PKCS12 truststore to PEM format.
 // It uses the Java keytool command if available, otherwise falls back to openssl.
 // Returns the path to a temporary PEM file that should be cleaned up after use.
-func convertTruststoreToPEM(truststorePath, truststorePassword string) (string, error) {
+func ConvertTruststoreToPEM(truststorePath, truststorePassword string) (string, error) {
 	if truststorePath == "" {
 		return "", nil
 	}
 
 	ext := strings.ToLower(filepath.Ext(truststorePath))
-	
+
 	// Try keytool first (works with JKS and PKCS12)
 	pemPath, err := convertWithKeytool(truststorePath, truststorePassword)
 	if err == nil {
@@ -131,7 +131,7 @@ func convertWithOpenSSL(truststorePath, password string) (string, error) {
 	}
 
 	pemPath := filepath.Join(tempDir, "truststore.pem")
-	
+
 	// openssl pkcs12 -in truststore.p12 -out truststore.pem -nodes -passin pass:password
 	cmd := hideConsoleWindow(exec.Command("openssl", "pkcs12", "-in", truststorePath, "-out", pemPath, "-nodes", "-passin", "pass:"+password))
 	output, err := cmd.CombinedOutput()
@@ -151,7 +151,7 @@ func convertWithOpenSSL(truststorePath, password string) (string, error) {
 func parseKeytoolAliases(output string) []string {
 	var aliases []string
 	lines := strings.Split(output, "\n")
-	
+
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 		// Look for lines like: "aliasname, Jul 15, 2024, trustedCertEntry,"
@@ -165,12 +165,12 @@ func parseKeytoolAliases(output string) []string {
 			}
 		}
 	}
-	
+
 	return aliases
 }
 
-// loadTruststorePEM loads certificates from a PEM file (converted from truststore).
-func loadTruststorePEM(pemPath string) (*x509.CertPool, error) {
+// LoadTruststorePEM loads certificates from a PEM file (converted from truststore).
+func LoadTruststorePEM(pemPath string) (*x509.CertPool, error) {
 	pemData, err := os.ReadFile(pemPath)
 	if err != nil {
 		return nil, fmt.Errorf("read truststore pem: %w", err)

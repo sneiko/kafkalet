@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"kafkalet/internal/broker"
@@ -13,14 +14,43 @@ import (
 // ObserverSession reads a topic without joining a consumer group.
 // No offsets are committed; the broker has no record of this client reading.
 type ObserverSession struct {
-	id     string
-	client *kgo.Client
-	cancel context.CancelFunc
+	id         string
+	client     *kgo.Client
+	cancel     context.CancelFunc
+	paused     bool
+	pauseCh    chan struct{}
+	resumeCh   chan struct{}
+	pauseMu    sync.Mutex
 }
 
 func (s *ObserverSession) ID() string { return s.id }
 
 func (s *ObserverSession) Stop() { s.cancel() }
+
+func (s *ObserverSession) Pause() {
+	s.pauseMu.Lock()
+	defer s.pauseMu.Unlock()
+	if !s.paused {
+		s.paused = true
+		s.pauseCh = make(chan struct{})
+	}
+}
+
+func (s *ObserverSession) Resume() {
+	s.pauseMu.Lock()
+	defer s.pauseMu.Unlock()
+	if s.paused {
+		s.paused = false
+		close(s.pauseCh)
+		s.pauseCh = nil
+	}
+}
+
+func (s *ObserverSession) IsPaused() bool {
+	s.pauseMu.Lock()
+	defer s.pauseMu.Unlock()
+	return s.paused
+}
 
 // newObserver creates an ObserverSession and starts the poll goroutine.
 // consumeOpts must include exactly one of kgo.ConsumeTopics or kgo.ConsumePartitions.
@@ -42,9 +72,10 @@ func newObserver(
 
 	sessCtx, cancel := context.WithCancel(appCtx)
 	s := &ObserverSession{
-		id:     sessionID,
-		client: client,
-		cancel: cancel,
+		id:       sessionID,
+		client:   client,
+		cancel:   cancel,
+		pauseCh:  make(chan struct{}),
 	}
 
 	go s.pollLoop(sessCtx, decode, emit)
@@ -55,6 +86,20 @@ func (s *ObserverSession) pollLoop(ctx context.Context, decode func([]byte) stri
 	defer s.client.Close()
 
 	for {
+		s.pauseMu.Lock()
+		paused := s.paused
+		pauseCh := s.pauseCh
+		s.pauseMu.Unlock()
+
+		if paused {
+			select {
+			case <-ctx.Done():
+				return
+			case <-pauseCh:
+				continue
+			}
+		}
+
 		fetches := s.client.PollFetches(ctx)
 
 		if ctx.Err() != nil {

@@ -18,6 +18,7 @@ export interface StreamSession {
   mode: 'observer' | 'consumer'
   groupId?: string
   messages: KafkaMessage[]
+  paused?: boolean
 }
 
 interface SessionState {
@@ -31,6 +32,7 @@ interface SessionState {
   mergeMessages: (sessionId: string, batch: KafkaMessage[]) => void
   setActiveSessionId: (id: string | null) => void
   clearMessages: (sessionId: string) => void
+  setSessionPaused: (id: string, paused: boolean) => void
   getSort: (topic: string) => SortState
   setSort: (topic: string, sort: SortState) => void
   getFilter: (topic: string) => ColumnFilterState
@@ -74,9 +76,18 @@ export const useSessionStore = create<SessionState>((set, get) => ({
 
   addSession: (s) =>
     set((state) => ({
-      sessions: { ...state.sessions, [s.id]: { ...s, messages: [] } },
+      sessions: { ...state.sessions, [s.id]: { ...s, messages: [], paused: false } },
       activeSessionId: s.id,
     })),
+
+  setSessionPaused: (id, paused) =>
+    set((state) => {
+      const session = state.sessions[id]
+      if (!session) return state
+      return {
+        sessions: { ...state.sessions, [id]: { ...session, paused } },
+      }
+    }),
 
   removeSession: (id) =>
     set((state) => {

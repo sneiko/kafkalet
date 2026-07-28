@@ -58,6 +58,8 @@ export function ImportSettings():Promise<void>;
 
 export function InvalidateTopicsCache(arg1:string):Promise<void>;
 
+export function IsSessionPaused(arg1:string):Promise<boolean>;
+
 export function ListAllConsumerGroups(arg1:string,arg2:string):Promise<Array<broker.GroupSummary>>;
 
 export function ListConsumerGroups(arg1:string,arg2:string,arg3:string):Promise<Array<broker.GroupLag>>;
@@ -70,6 +72,8 @@ export function ListTopics(arg1:string,arg2:string):Promise<Array<broker.Topic>>
 
 export function OpenURL(arg1:string):Promise<void>;
 
+export function PauseSession(arg1:string):Promise<void>;
+
 export function PinTopic(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ProduceMessage(arg1:string,arg2:string,arg3:broker.ProduceRequest):Promise<void>;
@@ -77,6 +81,8 @@ export function ProduceMessage(arg1:string,arg2:string,arg3:broker.ProduceReques
 export function RenameProfile(arg1:string,arg2:string):Promise<void>;
 
 export function ResetConsumerGroup(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<void>;
+
+export function ResumeSession(arg1:string):Promise<void>;
 
 export function SavePlugin(arg1:plugin.Plugin):Promise<plugin.Plugin>;
 
@@ -91,6 +97,8 @@ export function SetBrokerPassword(arg1:string,arg2:string,arg3:string):Promise<v
 export function SetNamedCredentialPassword(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function SetSchemaRegistryPassword(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function SetSchemaRegistryTruststorePassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SetTruststorePassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 

@@ -224,22 +224,23 @@ type exportProfile struct {
 }
 
 type exportBroker struct {
-	ID                     string                       `json:"id"`
-	Name                   string                       `json:"name"`
-	Addresses              []string                     `json:"addresses"`
-	SASL                   profile.SASLConfig           `json:"sasl"`
-	TLS                    profile.TLSConfig            `json:"tls"`
-	SchemaRegistry         profile.SchemaRegistryConfig `json:"schemaRegistry"`
-	ActiveCredentialID     string                       `json:"activeCredentialID,omitempty"`
-	SASLPassword           string                       `json:"saslPassword,omitempty"`
-	SchemaRegistryPassword string                       `json:"schemaRegistryPassword,omitempty"`
-	Credentials            []exportCredential           `json:"credentials,omitempty"`
-	TopicGroups            []profile.TopicGroup         `json:"topicGroups,omitempty"`
-	PinnedTopics           []string                     `json:"pinnedTopics,omitempty"`
-	CACertPEM              string                       `json:"caCertPEM,omitempty"`
-	ClientCertPEM          string                       `json:"clientCertPEM,omitempty"`
-	ClientKeyPEM           string                       `json:"clientKeyPEM,omitempty"`
-	TruststorePassword     string                       `json:"truststorePassword,omitempty"`
+	ID                              string                       `json:"id"`
+	Name                            string                       `json:"name"`
+	Addresses                       []string                     `json:"addresses"`
+	SASL                            profile.SASLConfig           `json:"sasl"`
+	TLS                             profile.TLSConfig            `json:"tls"`
+	SchemaRegistry                  profile.SchemaRegistryConfig `json:"schemaRegistry"`
+	ActiveCredentialID              string                       `json:"activeCredentialID,omitempty"`
+	SASLPassword                    string                       `json:"saslPassword,omitempty"`
+	SchemaRegistryPassword          string                       `json:"schemaRegistryPassword,omitempty"`
+	SchemaRegistryTruststorePassword string                      `json:"schemaRegistryTruststorePassword,omitempty"`
+	Credentials                     []exportCredential           `json:"credentials,omitempty"`
+	TopicGroups                     []profile.TopicGroup         `json:"topicGroups,omitempty"`
+	PinnedTopics                    []string                     `json:"pinnedTopics,omitempty"`
+	CACertPEM                       string                       `json:"caCertPEM,omitempty"`
+	ClientCertPEM                   string                       `json:"clientCertPEM,omitempty"`
+	ClientKeyPEM                    string                       `json:"clientKeyPEM,omitempty"`
+	TruststorePassword              string                       `json:"truststorePassword,omitempty"`
 }
 
 type exportCredential struct {
@@ -285,10 +286,15 @@ func (a *App) ExportSettings(includeSecrets bool) error {
 			eb.TLS.ClientCertPath = ""
 			eb.TLS.ClientKeyPath = ""
 			eb.TLS.TruststorePath = ""
+			eb.SchemaRegistry.TLS.CACertPath = ""
+			eb.SchemaRegistry.TLS.ClientCertPath = ""
+			eb.SchemaRegistry.TLS.ClientKeyPath = ""
+			eb.SchemaRegistry.TLS.TruststorePath = ""
 			if includeSecrets {
 				eb.SASLPassword, _ = profile.GetPassword(p.ID, b.ID)
 				eb.SchemaRegistryPassword, _ = profile.GetSchemaRegistryPassword(p.ID, b.ID)
 				eb.TruststorePassword, _ = profile.GetTruststorePassword(p.ID, b.ID)
+				eb.SchemaRegistryTruststorePassword, _ = profile.GetSchemaRegistryTruststorePassword(p.ID, b.ID)
 				if b.TLS.CACertPath != "" {
 					if pem, err := os.ReadFile(b.TLS.CACertPath); err == nil {
 						eb.CACertPEM = string(pem)
@@ -436,6 +442,9 @@ func (a *App) ImportSettings() error {
 			if eb.SchemaRegistryPassword != "" {
 				_ = profile.SaveSchemaRegistryPassword(ep.ID, eb.ID, eb.SchemaRegistryPassword)
 			}
+			if eb.SchemaRegistryTruststorePassword != "" {
+				_ = profile.SaveSchemaRegistryTruststorePassword(ep.ID, eb.ID, eb.SchemaRegistryTruststorePassword)
+			}
 			if eb.TruststorePassword != "" {
 				_ = profile.SaveTruststorePassword(ep.ID, eb.ID, eb.TruststorePassword)
 			}
@@ -565,7 +574,12 @@ func (a *App) UpdateBroker(profileID string, b profile.Broker) error {
 	if err := copyBrokerCerts(&b); err != nil {
 		return fmt.Errorf("copy certs: %w", err)
 	}
-	return a.profileStore.UpdateBroker(profileID, b)
+	if err := a.profileStore.UpdateBroker(profileID, b); err != nil {
+		return err
+	}
+	// Evict cached registry so it gets recreated with updated Schema Registry settings
+	a.evictRegistry(b.ID)
+	return nil
 }
 
 func (a *App) DeleteBroker(profileID, brokerID string) error {
@@ -574,6 +588,12 @@ func (a *App) DeleteBroker(profileID, brokerID string) error {
 	}
 	if err := profile.DeleteTruststorePassword(profileID, brokerID); err != nil {
 		runtime.LogWarningf(a.ctx, "delete truststore password: %v", err)
+	}
+	if err := profile.DeleteSchemaRegistryPassword(profileID, brokerID); err != nil {
+		runtime.LogWarningf(a.ctx, "delete schema registry password: %v", err)
+	}
+	if err := profile.DeleteSchemaRegistryTruststorePassword(profileID, brokerID); err != nil {
+		runtime.LogWarningf(a.ctx, "delete schema registry truststore password: %v", err)
 	}
 	return a.profileStore.DeleteBroker(profileID, brokerID)
 }
@@ -590,6 +610,11 @@ func (a *App) SetSchemaRegistryPassword(profileID, brokerID, password string) er
 // SetTruststorePassword stores the truststore password in the OS keychain.
 func (a *App) SetTruststorePassword(profileID, brokerID, password string) error {
 	return profile.SaveTruststorePassword(profileID, brokerID, password)
+}
+
+// SetSchemaRegistryTruststorePassword stores the Schema Registry truststore password in the OS keychain.
+func (a *App) SetSchemaRegistryTruststorePassword(profileID, brokerID, password string) error {
+	return profile.SaveSchemaRegistryTruststorePassword(profileID, brokerID, password)
 }
 
 // AddBrokerCredential adds a named credential to a broker.
@@ -907,6 +932,23 @@ func (a *App) StopSession(sessionID string) error {
 	return nil
 }
 
+// PauseSession pauses an active stream session without removing it.
+func (a *App) PauseSession(sessionID string) error {
+	a.streamMgr.Pause(sessionID)
+	return nil
+}
+
+// ResumeSession resumes a paused stream session.
+func (a *App) ResumeSession(sessionID string) error {
+	a.streamMgr.Resume(sessionID)
+	return nil
+}
+
+// IsSessionPaused returns true if the session is paused.
+func (a *App) IsSessionPaused(sessionID string) (bool, error) {
+	return a.streamMgr.IsPaused(sessionID), nil
+}
+
 // ── Search sessions ───────────────────────────────────────────────────────────
 
 // StartSearch starts a topic search session. Returns the session ID.
@@ -1108,7 +1150,18 @@ func (a *App) getOrCreateRegistry(profileID string, b profile.Broker) *schema.Re
 		return reg
 	}
 	password, _ := profile.GetSchemaRegistryPassword(profileID, b.ID)
-	reg := schema.New(b.SchemaRegistry.URL, b.SchemaRegistry.Username, password)
+	
+	// Load Schema Registry TLS settings
+	srTLS := b.SchemaRegistry.TLS
+	if srTLS.TruststorePath != "" {
+		var err error
+		srTLS.TruststorePassword, err = profile.GetSchemaRegistryTruststorePassword(profileID, b.ID)
+		if err != nil {
+			slog.Warn("load schema registry truststore password", "err", err)
+		}
+	}
+	
+	reg := schema.New(b.SchemaRegistry.URL, b.SchemaRegistry.Username, password, srTLS)
 	a.registries[b.ID] = reg
 	return reg
 }

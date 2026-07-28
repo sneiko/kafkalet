@@ -2,12 +2,16 @@ package schema
 
 import (
 	"container/list"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"sync"
+
+	"kafkalet/internal/profile"
+	"kafkalet/internal/tlsutil"
 )
 
 const defaultMaxEntries = 500
@@ -30,10 +34,9 @@ type lruEntry struct {
 }
 
 // New creates a Registry. Pass empty username/password for unauthenticated access.
-func New(url, username, password string) *Registry {
+func New(url, username, password string, tlsConfig profile.TLSConfig) *Registry {
 	r := &Registry{
 		url:        url,
-		client:     &http.Client{},
 		cache:      make(map[int32]*list.Element),
 		evictList:  list.New(),
 		maxEntries: defaultMaxEntries,
@@ -41,6 +44,17 @@ func New(url, username, password string) *Registry {
 	if username != "" {
 		r.auth = base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 	}
+
+	httpClient := &http.Client{}
+	if tlsConfig.Enabled || tlsConfig.TruststorePath != "" || tlsConfig.CACertPath != "" {
+		if tlsCfg, err := buildTLS(tlsConfig); err == nil {
+			httpClient.Transport = &http.Transport{
+				TLSClientConfig: tlsCfg,
+			}
+		}
+	}
+	r.client = httpClient
+
 	return r
 }
 
@@ -117,4 +131,36 @@ func (r *Registry) fetchSchema(id int32) (string, error) {
 		return "", fmt.Errorf("empty schema in registry response")
 	}
 	return result.Schema, nil
+}
+
+func buildTLS(cfg profile.TLSConfig) (*tls.Config, error) {
+	tlsCfg := &tls.Config{
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+	}
+
+	if cfg.TruststorePath != "" {
+		pemPath, err := tlsutil.ConvertTruststoreToPEM(cfg.TruststorePath, cfg.TruststorePassword)
+		if err != nil {
+			return nil, fmt.Errorf("convert truststore: %w", err)
+		}
+		cfg.CACertPath = pemPath
+	}
+
+	if cfg.CACertPath != "" {
+		pool, err := tlsutil.LoadTruststorePEM(cfg.CACertPath)
+		if err != nil {
+			return nil, err
+		}
+		tlsCfg.RootCAs = pool
+	}
+
+	if cfg.ClientCertPath != "" && cfg.ClientKeyPath != "" {
+		cert, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
+		if err != nil {
+			return nil, fmt.Errorf("load client cert: %w", err)
+		}
+		tlsCfg.Certificates = []tls.Certificate{cert}
+	}
+
+	return tlsCfg, nil
 }

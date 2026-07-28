@@ -9,6 +9,7 @@ export interface SASLConfig {
 export interface SchemaRegistryConfig {
   url: string
   username: string
+  tls: TLSConfig
 }
 
 export interface TLSConfig {
@@ -58,7 +59,7 @@ export function emptyBroker(): Broker {
     name: '',
     addresses: [],
     sasl: { mechanism: '', username: '', oauthTokenURL: '', oauthClientID: '', oauthScopes: [] },
-    schemaRegistry: { url: '', username: '' },
+    schemaRegistry: { url: '', username: '', tls: { enabled: false, insecureSkipVerify: false, caCertPath: '', clientCertPath: '', clientKeyPath: '', truststorePath: '', truststorePassword: '' } },
     tls: {
       enabled: false,
       insecureSkipVerify: false,

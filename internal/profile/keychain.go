@@ -20,6 +20,10 @@ func schemaRegistryKey(profileID, brokerID string) string {
 	return fmt.Sprintf("profile:%s:broker:%s:schema-registry", profileID, brokerID)
 }
 
+func schemaRegistryTruststoreKey(profileID, brokerID string) string {
+	return fmt.Sprintf("profile:%s:broker:%s:schema-registry-truststore", profileID, brokerID)
+}
+
 func truststoreKey(profileID, brokerID string) string {
 	return fmt.Sprintf("profile:%s:broker:%s:truststore", profileID, brokerID)
 }
@@ -66,6 +70,30 @@ func GetSchemaRegistryPassword(profileID, brokerID string) (string, error) {
 // DeleteSchemaRegistryPassword removes the Schema Registry password from the OS keychain.
 func DeleteSchemaRegistryPassword(profileID, brokerID string) error {
 	err := getStore().Delete(keychainService, schemaRegistryKey(profileID, brokerID))
+	if err == keyring.ErrNotFound {
+		return nil
+	}
+	return err
+}
+
+// SaveSchemaRegistryTruststorePassword stores the Schema Registry truststore password in the OS keychain.
+func SaveSchemaRegistryTruststorePassword(profileID, brokerID, password string) error {
+	return getStore().Set(keychainService, schemaRegistryTruststoreKey(profileID, brokerID), password)
+}
+
+// GetSchemaRegistryTruststorePassword retrieves the Schema Registry truststore password from the OS keychain.
+// Returns ("", nil) if not set.
+func GetSchemaRegistryTruststorePassword(profileID, brokerID string) (string, error) {
+	pw, err := getStore().Get(keychainService, schemaRegistryTruststoreKey(profileID, brokerID))
+	if err == keyring.ErrNotFound {
+		return "", nil
+	}
+	return pw, err
+}
+
+// DeleteSchemaRegistryTruststorePassword removes the Schema Registry truststore password from the OS keychain.
+func DeleteSchemaRegistryTruststorePassword(profileID, brokerID string) error {
+	err := getStore().Delete(keychainService, schemaRegistryTruststoreKey(profileID, brokerID))
 	if err == keyring.ErrNotFound {
 		return nil
 	}

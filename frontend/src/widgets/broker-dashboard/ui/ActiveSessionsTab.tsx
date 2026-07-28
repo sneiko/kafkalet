@@ -1,21 +1,29 @@
-import { Eye, Users, Square } from 'lucide-react'
+import { Eye, Users, Pause, Play } from 'lucide-react'
 
 import { IconButton } from '@/shared/ui/icon-button'
 import { useSessionStore } from '@entities/session'
-import { StopSession } from '@shared/api'
+import { PauseSession, ResumeSession } from '@shared/api'
 
 interface Props {
   brokerId: string
 }
 
 export function ActiveSessionsTab({ brokerId }: Props) {
-  const { sessions, activeSessionId, setActiveSessionId, removeSession } = useSessionStore()
+  const { sessions, activeSessionId, setActiveSessionId, setSessionPaused } = useSessionStore()
 
   const brokerSessions = Object.values(sessions).filter((s) => s.brokerId === brokerId)
 
-  const handleStop = async (sessionId: string) => {
-    await StopSession(sessionId)
-    removeSession(sessionId)
+  const handlePause = async (sessionId: string) => {
+    const session = sessions[sessionId]
+    if (!session) return
+    
+    if (session.paused) {
+      await ResumeSession(sessionId)
+      setSessionPaused(sessionId, false)
+    } else {
+      await PauseSession(sessionId)
+      setSessionPaused(sessionId, true)
+    }
   }
 
   if (brokerSessions.length === 0) {
@@ -55,14 +63,18 @@ export function ActiveSessionsTab({ brokerId }: Props) {
           <IconButton
             variant="ghost"
             size="icon"
-            className="h-5 w-5 shrink-0 text-destructive hover:text-destructive"
+            className="h-5 w-5 shrink-0 text-primary hover:text-primary"
             onClick={(e) => {
               e.stopPropagation()
-              handleStop(session.id)
+              handlePause(session.id)
             }}
-            tooltip="Stop session"
+            tooltip={session.paused ? 'Resume session' : 'Pause session'}
           >
-            <Square className="h-3 w-3 fill-current" />
+            {session.paused ? (
+              <Play className="h-3 w-3 fill-current" />
+            ) : (
+              <Pause className="h-3 w-3 fill-current" />
+            )}
           </IconButton>
         </button>
       ))}

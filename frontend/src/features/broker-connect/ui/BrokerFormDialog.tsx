@@ -18,6 +18,7 @@ import {
   AddBroker,
   UpdateBroker,
   SetSchemaRegistryPassword,
+  SetSchemaRegistryTruststorePassword,
   SetTruststorePassword,
   TestBrokerConnection,
   TestConnectionDirect,
@@ -64,6 +65,14 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       srUrl: broker?.schemaRegistry?.url ?? '',
       srUsername: broker?.schemaRegistry?.username ?? '',
       srPassword: '',
+      srTlsEnabled: broker?.schemaRegistry?.tls?.enabled ?? false,
+      srTlsUseTruststore: broker ? (broker.schemaRegistry?.tls?.truststorePath !== '') : false,
+      srTlsCaCertPath: broker?.schemaRegistry?.tls?.caCertPath ?? '',
+      srTlsClientCertPath: broker?.schemaRegistry?.tls?.clientCertPath ?? '',
+      srTlsClientKeyPath: broker?.schemaRegistry?.tls?.clientKeyPath ?? '',
+      srTlsInsecureSkipVerify: broker?.schemaRegistry?.tls?.insecureSkipVerify ?? false,
+      srTlsTruststorePath: broker?.schemaRegistry?.tls?.truststorePath ?? '',
+      srTlsTruststorePassword: '',
       initialCredName: '',
       initialCredMechanism: 'NONE',
       initialCredUsername: '',
@@ -75,7 +84,7 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
     },
   })
 
-  useEffect(() => {
+useEffect(() => {
     if (open) {
       form.reset({
         name: broker?.name ?? '',
@@ -91,6 +100,14 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         srUrl: broker?.schemaRegistry?.url ?? '',
         srUsername: broker?.schemaRegistry?.username ?? '',
         srPassword: '',
+        srTlsEnabled: broker?.schemaRegistry?.tls?.enabled ?? false,
+        srTlsUseTruststore: broker ? (broker.schemaRegistry?.tls?.truststorePath !== '') : false,
+        srTlsCaCertPath: broker?.schemaRegistry?.tls?.caCertPath ?? '',
+        srTlsClientCertPath: broker?.schemaRegistry?.tls?.clientCertPath ?? '',
+        srTlsClientKeyPath: broker?.schemaRegistry?.tls?.clientKeyPath ?? '',
+        srTlsInsecureSkipVerify: broker?.schemaRegistry?.tls?.insecureSkipVerify ?? false,
+        srTlsTruststorePath: broker?.schemaRegistry?.tls?.truststorePath ?? '',
+        srTlsTruststorePassword: '',
         initialCredName: '',
         initialCredMechanism: 'NONE',
         initialCredUsername: '',
@@ -137,6 +154,15 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       schemaRegistry: {
         url: values.srUrl.trim(),
         username: values.srUsername,
+        tls: {
+          enabled: values.srTlsEnabled || values.srTlsUseTruststore,
+          insecureSkipVerify: values.srTlsInsecureSkipVerify,
+          caCertPath: values.srTlsUseTruststore ? '' : values.srTlsCaCertPath,
+          clientCertPath: values.srTlsUseTruststore ? '' : values.srTlsClientCertPath,
+          clientKeyPath: values.srTlsUseTruststore ? '' : values.srTlsClientKeyPath,
+          truststorePath: values.srTlsUseTruststore ? values.srTlsTruststorePath : '',
+          truststorePassword: values.srTlsUseTruststore ? values.srTlsTruststorePassword : '',
+        },
       },
       credentials: broker?.credentials,
       activeCredentialID: broker?.activeCredentialID,
@@ -153,6 +179,10 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
 
 if (values.srPassword) {
         await SetSchemaRegistryPassword(profileId, savedBroker.id, values.srPassword)
+      }
+
+      if (values.srTlsTruststorePassword) {
+        await SetSchemaRegistryTruststorePassword(profileId, savedBroker.id, values.srTlsTruststorePassword)
       }
 
       if (values.tlsTruststorePassword) {

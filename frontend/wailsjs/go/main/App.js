@@ -106,6 +106,10 @@ export function InvalidateTopicsCache(arg1) {
   return window['go']['main']['App']['InvalidateTopicsCache'](arg1);
 }
 
+export function IsSessionPaused(arg1) {
+  return window['go']['main']['App']['IsSessionPaused'](arg1);
+}
+
 export function ListAllConsumerGroups(arg1, arg2) {
   return window['go']['main']['App']['ListAllConsumerGroups'](arg1, arg2);
 }
@@ -130,6 +134,10 @@ export function OpenURL(arg1) {
   return window['go']['main']['App']['OpenURL'](arg1);
 }
 
+export function PauseSession(arg1) {
+  return window['go']['main']['App']['PauseSession'](arg1);
+}
+
 export function PinTopic(arg1, arg2, arg3) {
   return window['go']['main']['App']['PinTopic'](arg1, arg2, arg3);
 }
@@ -144,6 +152,10 @@ export function RenameProfile(arg1, arg2) {
 
 export function ResetConsumerGroup(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['ResetConsumerGroup'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function ResumeSession(arg1) {
+  return window['go']['main']['App']['ResumeSession'](arg1);
 }
 
 export function SavePlugin(arg1) {
@@ -172,6 +184,10 @@ export function SetNamedCredentialPassword(arg1, arg2, arg3, arg4) {
 
 export function SetSchemaRegistryPassword(arg1, arg2, arg3) {
   return window['go']['main']['App']['SetSchemaRegistryPassword'](arg1, arg2, arg3);
+}
+
+export function SetSchemaRegistryTruststorePassword(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SetSchemaRegistryTruststorePassword'](arg1, arg2, arg3);
 }
 
 export function SetTruststorePassword(arg1, arg2, arg3) {

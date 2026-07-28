@@ -162,6 +162,65 @@ func (m *Manager) Stop(sessionID string) {
 	}
 }
 
+// Pause pauses a session without removing it.
+func (m *Manager) Pause(sessionID string) {
+	m.mu.RLock()
+	s, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	
+	if !ok {
+		return
+	}
+	
+	// Type assert to concrete types that have Pause method
+	switch sess := s.(type) {
+	case *ObserverSession:
+		sess.Pause()
+	case *ConsumerSession:
+		sess.Pause()
+	}
+}
+
+// Resume resumes a paused session.
+func (m *Manager) Resume(sessionID string) {
+	m.mu.RLock()
+	s, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	
+	if !ok {
+		return
+	}
+	
+	// Type assert to concrete types that have Resume method
+	switch sess := s.(type) {
+	case *ObserverSession:
+		sess.Resume()
+	case *ConsumerSession:
+		sess.Resume()
+	}
+}
+
+// IsPaused returns true if the session is paused.
+func (m *Manager) IsPaused(sessionID string) bool {
+	m.mu.RLock()
+	s, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	
+	if !ok {
+		return false
+	}
+	
+	// Type assert to concrete types that have IsPaused method
+	switch sess := s.(type) {
+	case *ObserverSession:
+		return sess.IsPaused()
+	case *ConsumerSession:
+		return sess.IsPaused()
+	default:
+		return false
+	}
+}
+
 // StopBroker stops all sessions for the given broker ID.
 func (m *Manager) StopBroker(brokerID string) {
 	m.mu.Lock()

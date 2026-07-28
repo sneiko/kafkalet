@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"sync"
 
 	"github.com/twmb/franz-go/pkg/kgo"
 	"kafkalet/internal/broker"
@@ -13,15 +14,44 @@ import (
 // ConsumerSession joins a named consumer group and tracks offset commits.
 // Auto-commit is disabled — the user must call Commit explicitly to persist progress.
 type ConsumerSession struct {
-	id      string
-	groupID string
-	client  *kgo.Client
-	cancel  context.CancelFunc
+	id         string
+	groupID    string
+	client     *kgo.Client
+	cancel     context.CancelFunc
+	paused     bool
+	pauseCh    chan struct{}
+	resumeCh   chan struct{}
+	pauseMu    sync.Mutex
 }
 
 func (s *ConsumerSession) ID() string { return s.id }
 
 func (s *ConsumerSession) Stop() { s.cancel() }
+
+func (s *ConsumerSession) Pause() {
+	s.pauseMu.Lock()
+	defer s.pauseMu.Unlock()
+	if !s.paused {
+		s.paused = true
+		s.pauseCh = make(chan struct{})
+	}
+}
+
+func (s *ConsumerSession) Resume() {
+	s.pauseMu.Lock()
+	defer s.pauseMu.Unlock()
+	if s.paused {
+		s.paused = false
+		close(s.pauseCh)
+		s.pauseCh = nil
+	}
+}
+
+func (s *ConsumerSession) IsPaused() bool {
+	s.pauseMu.Lock()
+	defer s.pauseMu.Unlock()
+	return s.paused
+}
 
 // Commit persists all marked-but-not-yet-committed offsets to Kafka.
 // Called on explicit user action ("Commit" button in the UI).
@@ -54,10 +84,11 @@ func newConsumer(
 
 	sessCtx, cancel := context.WithCancel(appCtx)
 	s := &ConsumerSession{
-		id:      sessionID,
-		groupID: groupID,
-		client:  client,
-		cancel:  cancel,
+		id:       sessionID,
+		groupID:  groupID,
+		client:   client,
+		cancel:   cancel,
+		pauseCh:  make(chan struct{}),
 	}
 
 	go s.pollLoop(sessCtx, decode, emit)
@@ -68,6 +99,20 @@ func (s *ConsumerSession) pollLoop(ctx context.Context, decode func([]byte) stri
 	defer s.client.Close()
 
 	for {
+		s.pauseMu.Lock()
+		paused := s.paused
+		pauseCh := s.pauseCh
+		s.pauseMu.Unlock()
+
+		if paused {
+			select {
+			case <-ctx.Done():
+				return
+			case <-pauseCh:
+				continue
+			}
+		}
+
 		fetches := s.client.PollFetches(ctx)
 
 		if ctx.Err() != nil {

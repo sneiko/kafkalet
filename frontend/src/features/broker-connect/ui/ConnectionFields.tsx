@@ -186,6 +186,86 @@ export function ConnectionFields({ form }: ConnectionFieldsProps) {
               </FormItem>
             )}
           />
+
+          <Separator className="my-3" />
+
+          <FormField
+            control={form.control}
+            name="srTlsEnabled"
+            render={({ field }) => (
+              <FormItem className="flex items-center gap-2">
+                <FormControl>
+                  <input
+                    type="checkbox"
+                    checked={field.value}
+                    onChange={field.onChange}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                </FormControl>
+                <FormLabel className="!mt-0">Enable TLS for Schema Registry</FormLabel>
+              </FormItem>
+            )}
+          />
+
+          {form.watch('srTlsEnabled') && (
+            <div className="space-y-3 pl-3 border-l-2 border-muted">
+              <CertPathField form={form} name="srTlsCaCertPath" label="CA Certificate" />
+              <CertPathField form={form} name="srTlsClientCertPath" label="Client Certificate" />
+              <CertPathField form={form} name="srTlsClientKeyPath" label="Client Key" />
+
+              <FormField
+                control={form.control}
+                name="srTlsInsecureSkipVerify"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={field.onChange}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Skip certificate verification</FormLabel>
+                  </FormItem>
+                )}
+              />
+              {form.watch('srTlsInsecureSkipVerify') && (
+                <p className="text-xs text-amber-500">
+                  Warning: Disabling certificate verification is insecure and should only be used for development.
+                </p>
+              )}
+
+              <Separator className="my-3" />
+
+              <FormField
+                control={form.control}
+                name="srTlsUseTruststore"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        checked={field.value}
+                        onChange={(v) => {
+                          field.onChange(v)
+                          if (v) form.setValue('srTlsEnabled', true)
+                        }}
+                        className="h-4 w-4 rounded border-border"
+                      />
+                    </FormControl>
+                    <FormLabel className="!mt-0">Use Truststore (JKS/PKCS12)</FormLabel>
+                  </FormItem>
+                )}
+              />
+
+              {form.watch('srTlsUseTruststore') && (
+                <div className="space-y-2 pl-3 border-l-2 border-muted">
+                  <SrTruststorePathField form={form} />
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </>
@@ -198,7 +278,7 @@ function CertPathField({
   label,
 }: {
   form: UseFormReturn<FormValues>
-  name: 'tlsCaCertPath' | 'tlsClientCertPath' | 'tlsClientKeyPath'
+  name: 'tlsCaCertPath' | 'tlsClientCertPath' | 'tlsClientKeyPath' | 'srTlsCaCertPath' | 'srTlsClientCertPath' | 'srTlsClientKeyPath'
   label: string
 }) {
   return (
@@ -290,6 +370,63 @@ function TruststorePathField({
       <FormField
         control={form.control}
         name="tlsTruststorePassword"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>
+              Truststore Password{' '}
+              <span className="text-muted-foreground">(stored in keychain)</span>
+            </FormLabel>
+            <FormControl>
+              <Input type="password" placeholder="Leave blank to keep existing" {...field} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+    </div>
+  )
+}
+
+function SrTruststorePathField({
+  form,
+}: {
+  form: UseFormReturn<FormValues>
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-1">
+        <Input
+          readOnly
+          placeholder="Select JKS or PKCS12 file"
+          value={form.watch('srTlsTruststorePath')}
+          className="flex-1 text-xs truncate"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="shrink-0"
+          onClick={async () => {
+            const path = await SelectTruststoreFile()
+            if (path) form.setValue('srTlsTruststorePath', path)
+          }}
+        >
+          <FolderOpen className="h-4 w-4" />
+        </Button>
+        {form.watch('srTlsTruststorePath') && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            onClick={() => form.setValue('srTlsTruststorePath', '')}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
+      <FormField
+        control={form.control}
+        name="srTlsTruststorePassword"
         render={({ field }) => (
           <FormItem>
             <FormLabel>

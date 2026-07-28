@@ -1164,6 +1164,8 @@ func (a *App) getOrCreateRegistry(profileID string, b profile.Broker) *schema.Re
 	
 	// Load Schema Registry TLS settings
 	srTLS := b.SchemaRegistry.TLS
+	slog.Debug("schema registry TLS config", "broker", b.ID, "enabled", srTLS.Enabled, "truststorePath", srTLS.TruststorePath, "caCertPath", srTLS.CACertPath)
+	
 	if srTLS.TruststorePath != "" {
 		var err error
 		srTLS.TruststorePassword, err = profile.GetSchemaRegistryTruststorePassword(profileID, b.ID)
@@ -1172,11 +1174,15 @@ func (a *App) getOrCreateRegistry(profileID string, b profile.Broker) *schema.Re
 		}
 		if srTLS.TruststorePassword == "" {
 			slog.Error("schema registry truststore password is empty", "broker", b.ID, "path", srTLS.TruststorePath)
+		} else {
+			slog.Debug("schema registry truststore password loaded", "broker", b.ID, "pathLength", len(srTLS.TruststorePassword))
 		}
 	}
 	
+	slog.Debug("creating schema registry client", "url", b.SchemaRegistry.URL, "username", b.SchemaRegistry.Username, "tlsEnabled", srTLS.Enabled, "truststorePath", srTLS.TruststorePath)
 	reg := schema.New(b.SchemaRegistry.URL, b.SchemaRegistry.Username, password, srTLS)
 	a.registries[b.ID] = reg
+	slog.Debug("schema registry client created successfully", "broker", b.ID)
 	return reg
 }
 

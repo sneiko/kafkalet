@@ -46,13 +46,25 @@ func New(url, username, password string, tlsConfig profile.TLSConfig) *Registry 
 		r.auth = base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
 	}
 
+	// Auto-enable TLS if truststore or CA cert is provided
+	if tlsConfig.TruststorePath != "" || tlsConfig.CACertPath != "" || tlsConfig.ClientCertPath != "" {
+		tlsConfig.Enabled = true
+		slog.Debug("schema registry TLS auto-enabled", "truststorePath", tlsConfig.TruststorePath, "caCertPath", tlsConfig.CACertPath, "clientCertPath", tlsConfig.ClientCertPath)
+	}
+
 	httpClient := &http.Client{}
-	if tlsConfig.Enabled || tlsConfig.TruststorePath != "" || tlsConfig.CACertPath != "" {
+	if tlsConfig.Enabled {
+		slog.Debug("building TLS config for schema registry", "insecureSkipVerify", tlsConfig.InsecureSkipVerify, "truststorePath", tlsConfig.TruststorePath)
 		if tlsCfg, err := buildTLS(tlsConfig); err == nil {
 			httpClient.Transport = &http.Transport{
 				TLSClientConfig: tlsCfg,
 			}
+			slog.Debug("schema registry HTTP client configured with TLS")
+		} else {
+			slog.Error("failed to build TLS config for schema registry", "err", err)
 		}
+	} else {
+		slog.Debug("schema registry TLS not enabled, using default HTTP client")
 	}
 	r.client = httpClient
 
@@ -135,6 +147,8 @@ func (r *Registry) fetchSchema(id int32) (string, error) {
 }
 
 func buildTLS(cfg profile.TLSConfig) (*tls.Config, error) {
+	slog.Debug("buildTLS called", "insecureSkipVerify", cfg.InsecureSkipVerify, "trustPath", cfg.TruststorePath, "caCertPath", cfg.CACertPath)
+	
 	tlsCfg := &tls.Config{
 		InsecureSkipVerify: cfg.InsecureSkipVerify,
 	}
@@ -143,6 +157,7 @@ func buildTLS(cfg profile.TLSConfig) (*tls.Config, error) {
 		slog.Debug("converting schema registry truststore", "path", cfg.TruststorePath, "hasPassword", cfg.TruststorePassword != "")
 		pemPath, err := tlsutil.ConvertTruststoreToPEM(cfg.TruststorePath, cfg.TruststorePassword)
 		if err != nil {
+			slog.Error("failed to convert truststore to PEM", "path", cfg.TruststorePath, "err", err)
 			return nil, fmt.Errorf("convert truststore (path=%s, hasPassword=%v): %w", cfg.TruststorePath, cfg.TruststorePassword != "", err)
 		}
 		slog.Debug("truststore converted successfully", "pemPath", pemPath)
@@ -150,20 +165,27 @@ func buildTLS(cfg profile.TLSConfig) (*tls.Config, error) {
 	}
 
 	if cfg.CACertPath != "" {
+		slog.Debug("loading CA cert from PEM", "path", cfg.CACertPath)
 		pool, err := tlsutil.LoadTruststorePEM(cfg.CACertPath)
 		if err != nil {
+			slog.Error("failed to load CA cert pool", "path", cfg.CACertPath, "err", err)
 			return nil, err
 		}
 		tlsCfg.RootCAs = pool
+		slog.Debug("CA cert pool loaded successfully")
 	}
 
 	if cfg.ClientCertPath != "" && cfg.ClientKeyPath != "" {
+		slog.Debug("loading client certificate", "certPath", cfg.ClientCertPath, "keyPath", cfg.ClientKeyPath)
 		cert, err := tls.LoadX509KeyPair(cfg.ClientCertPath, cfg.ClientKeyPath)
 		if err != nil {
+			slog.Error("failed to load client certificate", "err", err)
 			return nil, fmt.Errorf("load client cert: %w", err)
 		}
 		tlsCfg.Certificates = []tls.Certificate{cert}
+		slog.Debug("client certificate loaded successfully")
 	}
 
+	slog.Debug("TLS config built successfully", "hasRootCAs", tlsCfg.RootCAs != nil, "hasClientCerts", len(tlsCfg.Certificates) > 0)
 	return tlsCfg, nil
 }

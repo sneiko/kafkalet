@@ -181,12 +181,20 @@ if (values.srPassword) {
         await SetSchemaRegistryPassword(profileId, savedBroker.id, values.srPassword)
       }
 
-      if (values.srTlsTruststorePassword && values.srTlsUseTruststore) {
-        await SetSchemaRegistryTruststorePassword(profileId, savedBroker.id, values.srTlsTruststorePassword)
+      // Save Schema Registry truststore password (only if provided, keep existing if empty in edit mode)
+      if (values.srTlsUseTruststore) {
+        if (values.srTlsTruststorePassword) {
+          await SetSchemaRegistryTruststorePassword(profileId, savedBroker.id, values.srTlsTruststorePassword)
+        }
+        // In edit mode with empty password field, keep existing password - do nothing
       }
 
-      if (values.tlsTruststorePassword && values.tlsUseTruststore) {
-        await SetTruststorePassword(profileId, savedBroker.id, values.tlsTruststorePassword)
+      // Save Broker TLS truststore password (only if provided, keep existing if empty in edit mode)
+      if (values.tlsUseTruststore) {
+        if (values.tlsTruststorePassword) {
+          await SetTruststorePassword(profileId, savedBroker.id, values.tlsTruststorePassword)
+        }
+        // In edit mode with empty password field, keep existing password - do nothing
       }
 
       // Add initial credential for new brokers (skip if no auth)

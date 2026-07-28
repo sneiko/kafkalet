@@ -20,6 +20,10 @@ func ConvertTruststoreToPEM(truststorePath, truststorePassword string) (string, 
 		return "", nil
 	}
 
+	if truststorePassword == "" {
+		return "", fmt.Errorf("truststore password is required")
+	}
+
 	ext := strings.ToLower(filepath.Ext(truststorePath))
 
 	// Try keytool first (works with JKS and PKCS12)

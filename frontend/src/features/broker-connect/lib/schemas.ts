@@ -35,27 +35,33 @@ export const baseSchema = z.object({
 })
 
 export function buildSchema(isEdit: boolean) {
-  if (isEdit) return baseSchema
   return baseSchema.superRefine((data, ctx) => {
-    if (data.initialCredMechanism === 'NONE') return
-    if (!data.initialCredName.trim()) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredName'] })
+    // Validation for add mode only
+    if (!isEdit) {
+      if (data.initialCredMechanism === 'NONE') return
+      if (!data.initialCredName.trim()) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredName'] })
+      }
+      const isOAuth = data.initialCredMechanism === 'OAUTHBEARER'
+      if (!isOAuth) {
+        if (!data.initialCredUsername.trim()) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredUsername'] })
+        }
+        if (!data.initialCredPassword) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredPassword'] })
+        }
+      } else {
+        if (!data.initialCredPassword) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredPassword'] })
+        }
+      }
     }
-    const isOAuth = data.initialCredMechanism === 'OAUTHBEARER'
-    if (!isOAuth) {
-      if (!data.initialCredUsername.trim()) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredUsername'] })
-      }
-      if (!data.initialCredPassword) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredPassword'] })
-      }
-    } else {
-      if (!data.initialCredPassword) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredPassword'] })
-      }
+    // Validate Broker TLS truststore password (add mode only, edit mode allows keeping existing)
+    if (!isEdit && data.addresses && data.tlsUseTruststore && !data.tlsTruststorePassword) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Truststore password is required', path: ['tlsTruststorePassword'] })
     }
-    // Validate Schema Registry truststore password
-    if (data.srUrl.trim() && data.srTlsUseTruststore && !data.srTlsTruststorePassword) {
+    // Validate Schema Registry truststore password (add mode only, edit mode allows keeping existing)
+    if (!isEdit && data.srUrl.trim() && data.srTlsUseTruststore && !data.srTlsTruststorePassword) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Truststore password is required', path: ['srTlsTruststorePassword'] })
     }
   })

@@ -42,6 +42,57 @@ type GroupLag struct {
 	Partitions []PartitionLag `json:"partitions"`
 }
 
+// TopicMessageCount represents the message count for a topic.
+type TopicMessageCount struct {
+	Topic      string            `json:"topic"`
+	Total      int64             `json:"total"`
+	Partitions []PartitionCount  `json:"partitions"`
+}
+
+// PartitionCount is the message count for one partition.
+type PartitionCount struct {
+	Partition int32 `json:"partition"`
+	Count     int64 `json:"count"`
+}
+
+// CountTopicMessages returns the total message count and per-partition counts for a topic.
+func CountTopicMessages(ctx context.Context, client *kgo.Client, topic string) (TopicMessageCount, error) {
+	adm := kadm.NewClient(client)
+
+	endOffsets, err := adm.ListEndOffsets(ctx, topic)
+	if err != nil {
+		return TopicMessageCount{}, fmt.Errorf("list end offsets: %w", err)
+	}
+
+	result := TopicMessageCount{
+		Topic:      topic,
+		Partitions: make([]PartitionCount, 0),
+	}
+
+	topicOffsets, ok := endOffsets[topic]
+	if !ok {
+		return result, nil
+	}
+
+	for partition, offset := range topicOffsets {
+		if offset.Err != nil {
+			continue
+		}
+		pc := PartitionCount{
+			Partition: partition,
+			Count:     offset.Offset,
+		}
+		result.Partitions = append(result.Partitions, pc)
+		result.Total += offset.Offset
+	}
+
+	sort.Slice(result.Partitions, func(i, j int) bool {
+		return result.Partitions[i].Partition < result.Partitions[j].Partition
+	})
+
+	return result, nil
+}
+
 // Topic is a Kafka topic with basic metadata returned to the frontend.
 type Topic struct {
 	Name       string `json:"name"`

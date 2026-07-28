@@ -886,6 +886,16 @@ func (a *App) AlterTopicConfig(profileID, brokerID, topicName, key, value string
 	return broker.AlterTopicConfig(ctx, client, topicName, key, value)
 }
 
+// GetTopicMessageCount returns the total message count and per-partition counts for a topic.
+func (a *App) GetTopicMessageCount(profileID, brokerID, topic string) (broker.TopicMessageCount, error) {
+	ctx, cancel, client, err := a.pooledClient(profileID, brokerID)
+	if err != nil {
+		return broker.TopicMessageCount{}, err
+	}
+	defer cancel()
+	return broker.CountTopicMessages(ctx, client, topic)
+}
+
 // ── Stream sessions ───────────────────────────────────────────────────────────
 
 // StartObserver starts reading a topic without joining a consumer group.

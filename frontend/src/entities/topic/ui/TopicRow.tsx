@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Play, Users, Send, Info, Search, MoreHorizontal, Trash2, Star } from 'lucide-react'
+import { Play, Users, Send, Info, Search, MoreHorizontal, Trash2, Star, Hash } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import {
   DropdownMenu,
@@ -19,11 +19,12 @@ interface Props {
   onProduce: (topic: Topic) => void
   onSearch: (topic: Topic) => void
   onInfo: (topic: Topic) => void
+  onCountMessages?: (topic: Topic) => void
   onDelete?: (topic: Topic) => void
   onTogglePin?: (topic: Topic) => void
 }
 
-export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProduce, onSearch, onInfo, onDelete, onTogglePin }: Props) {
+export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProduce, onSearch, onInfo, onCountMessages, onDelete, onTogglePin }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -98,6 +99,12 @@ export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProdu
             <Info className="mr-2 h-3 w-3" />
             Topic Info
           </DropdownMenuItem>
+          {onCountMessages && (
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCountMessages(topic); }}>
+              <Hash className="mr-2 h-3 w-3" />
+              Count Messages
+            </DropdownMenuItem>
+          )}
           {onTogglePin && (
             <>
               <DropdownMenuSeparator />

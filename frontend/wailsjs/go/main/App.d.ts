@@ -52,6 +52,8 @@ export function GetConsumerGroupDetail(arg1:string,arg2:string,arg3:string):Prom
 
 export function GetTopicConfig(arg1:string,arg2:string,arg3:string):Promise<Array<broker.TopicConfigEntry>>;
 
+export function GetTopicMessageCount(arg1:string,arg2:string,arg3:string):Promise<broker.TopicMessageCount>;
+
 export function GetTopicMetadata(arg1:string,arg2:string,arg3:string):Promise<broker.TopicMetadata>;
 
 export function ImportSettings():Promise<void>;

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -139,10 +140,12 @@ func buildTLS(cfg profile.TLSConfig) (*tls.Config, error) {
 	}
 
 	if cfg.TruststorePath != "" {
+		slog.Debug("converting schema registry truststore", "path", cfg.TruststorePath, "hasPassword", cfg.TruststorePassword != "")
 		pemPath, err := tlsutil.ConvertTruststoreToPEM(cfg.TruststorePath, cfg.TruststorePassword)
 		if err != nil {
-			return nil, fmt.Errorf("convert truststore: %w", err)
+			return nil, fmt.Errorf("convert truststore (path=%s, hasPassword=%v): %w", cfg.TruststorePath, cfg.TruststorePassword != "", err)
 		}
+		slog.Debug("truststore converted successfully", "pemPath", pemPath)
 		cfg.CACertPath = pemPath
 	}
 

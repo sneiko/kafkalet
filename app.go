@@ -1159,6 +1159,9 @@ func (a *App) getOrCreateRegistry(profileID string, b profile.Broker) *schema.Re
 		if err != nil {
 			slog.Warn("load schema registry truststore password", "err", err)
 		}
+		if srTLS.TruststorePassword == "" {
+			slog.Error("schema registry truststore password is empty", "broker", b.ID, "path", srTLS.TruststorePath)
+		}
 	}
 	
 	reg := schema.New(b.SchemaRegistry.URL, b.SchemaRegistry.Username, password, srTLS)

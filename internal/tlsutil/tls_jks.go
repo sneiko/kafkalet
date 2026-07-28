@@ -48,6 +48,11 @@ func convertWithKeytool(truststorePath, password string) (string, error) {
 		storeType = "PKCS12"
 	}
 
+	// Check for empty password
+	if password == "" {
+		return "", fmt.Errorf("truststore password is not specified")
+	}
+
 	// Create temp directory for certificates
 	tempDir, err := os.MkdirTemp("", "kafkalet-truststore-*")
 	if err != nil {
@@ -61,12 +66,12 @@ func convertWithKeytool(truststorePath, password string) (string, error) {
 		os.RemoveAll(tempDir)
 		outputStr := string(output)
 		if strings.Contains(outputStr, "password") || strings.Contains(outputStr, "Keystore was tampered") {
-			return "", fmt.Errorf("неверный пароль truststore")
+			return "", fmt.Errorf("incorrect truststore password")
 		}
 		if strings.Contains(outputStr, "was not found") {
-			return "", fmt.Errorf("файл truststore не найден")
+			return "", fmt.Errorf("truststore file not found")
 		}
-		return "", fmt.Errorf("ошибка чтения truststore (проверьте файл и пароль)")
+		return "", fmt.Errorf("truststore read error (check file and password)")
 	}
 
 	// Parse aliases from output
@@ -83,7 +88,7 @@ func convertWithKeytool(truststorePath, password string) (string, error) {
 		certOut, err := certCmd.Output()
 		if err != nil {
 			os.RemoveAll(tempDir)
-			return "", fmt.Errorf("ошибка экспорта сертификата из truststore")
+			return "", fmt.Errorf("certificate export error from truststore")
 		}
 
 		// Parse PEM blocks from certificate
@@ -125,13 +130,18 @@ func convertWithKeytool(truststorePath, password string) (string, error) {
 
 // convertWithOpenSSL uses openssl to convert PKCS12 to PEM.
 func convertWithOpenSSL(truststorePath, password string) (string, error) {
+	// Check for empty password
+	if password == "" {
+		return "", fmt.Errorf("truststore password is not specified")
+	}
+
 	tempDir, err := os.MkdirTemp("", "kafkalet-truststore-*")
 	if err != nil {
 		return "", fmt.Errorf("create temp dir: %w", err)
 	}
 
 	pemPath := filepath.Join(tempDir, "truststore.pem")
-
+	
 	// openssl pkcs12 -in truststore.p12 -out truststore.pem -nodes -passin pass:password
 	cmd := hideConsoleWindow(exec.Command("openssl", "pkcs12", "-in", truststorePath, "-out", pemPath, "-nodes", "-passin", "pass:"+password))
 	output, err := cmd.CombinedOutput()
@@ -139,9 +149,9 @@ func convertWithOpenSSL(truststorePath, password string) (string, error) {
 		os.RemoveAll(tempDir)
 		outputStr := string(output)
 		if strings.Contains(outputStr, "password") || strings.Contains(outputStr, "incorrect") {
-			return "", fmt.Errorf("неверный пароль truststore")
+			return "", fmt.Errorf("incorrect truststore password")
 		}
-		return "", fmt.Errorf("ошибка чтения truststore (проверьте файл и пароль)")
+		return "", fmt.Errorf("truststore read error (check file and password)")
 	}
 
 	return pemPath, nil

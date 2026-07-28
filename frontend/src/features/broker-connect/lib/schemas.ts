@@ -54,6 +54,10 @@ export function buildSchema(isEdit: boolean) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Required', path: ['initialCredPassword'] })
       }
     }
+    // Validate Schema Registry truststore password
+    if (data.srUrl.trim() && data.srTlsUseTruststore && !data.srTlsTruststorePassword) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Truststore password is required', path: ['srTlsTruststorePassword'] })
+    }
   })
 }
 

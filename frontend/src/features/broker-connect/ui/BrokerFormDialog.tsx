@@ -181,11 +181,11 @@ if (values.srPassword) {
         await SetSchemaRegistryPassword(profileId, savedBroker.id, values.srPassword)
       }
 
-      if (values.srTlsTruststorePassword) {
+      if (values.srTlsTruststorePassword && values.srTlsUseTruststore) {
         await SetSchemaRegistryTruststorePassword(profileId, savedBroker.id, values.srTlsTruststorePassword)
       }
 
-      if (values.tlsTruststorePassword) {
+      if (values.tlsTruststorePassword && values.tlsUseTruststore) {
         await SetTruststorePassword(profileId, savedBroker.id, values.tlsTruststorePassword)
       }
 

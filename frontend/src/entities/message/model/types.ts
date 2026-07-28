@@ -3,6 +3,7 @@ export interface KafkaMessage {
   partition: number
   offset: number
   key: string
+  decodedKey: string
   value: string
   timestamp: string // ISO 8601
   headers: Array<{ key: string; value: string }>

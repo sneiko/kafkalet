@@ -3,6 +3,7 @@ package search
 import (
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -21,6 +22,38 @@ const progressInterval = 1000
 // EmitFunc sends an event to the frontend (goroutine-safe).
 type EmitFunc func(eventName string, data any)
 
+// buildKeyDecode returns a key-decode function backed by Schema Registry.
+// Returns (display, decoded) where:
+// - display: What to show in UI (decoded if available, otherwise hex/utf8)
+// - decoded: Decoded Avro JSON, or hex for binary, or empty
+func buildKeyDecode(reg *schema.Registry, topic string) func([]byte) (string, string) {
+	if reg == nil {
+		return func(raw []byte) (string, string) {
+			s := safeString(raw)
+			return s, ""
+		}
+	}
+
+	return func(raw []byte) (string, string) {
+		if len(raw) == 0 {
+			return "", ""
+		}
+
+		decoded, ok, err := schema.TryDecodeAvroKey(reg, topic, raw)
+		if ok && err == nil {
+			return decoded, decoded
+		}
+
+		if !utf8.Valid(raw) {
+			hexStr := toHex(raw)
+			return hexStr, hexStr
+		}
+
+		s := string(raw)
+		return s, ""
+	}
+}
+
 // SearchSession scans a topic for messages matching a pattern.
 type SearchSession struct {
 	id     string
@@ -33,6 +66,34 @@ func (s *SearchSession) Stop()      { s.cancel() }
 
 // matcher checks whether a string matches the search pattern.
 type matcher func(s string) bool
+
+// toHex converts bytes to human-readable hex string.
+func toHex(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+	hexStr := hex.EncodeToString(b)
+	result := make([]byte, 0, len(hexStr)+len(hexStr)/2)
+	for i := 0; i < len(hexStr); i += 2 {
+		if i > 0 {
+			result = append(result, ' ')
+		}
+		result = append(result, hexStr[i], hexStr[i+1])
+	}
+	return string(result)
+}
+
+// safeString converts a byte slice to string. Uses base64 if the bytes
+// are not valid UTF-8 (e.g. binary keys/values).
+func safeString(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+	if utf8.Valid(b) {
+		return string(b)
+	}
+	return base64.StdEncoding.EncodeToString(b)
+}
 
 func buildMatcher(pattern string, useRegex bool) (matcher, error) {
 	if pattern == "" {
@@ -178,8 +239,9 @@ func newSearchSession(
 	}
 
 	decode := buildDecode(reg)
+	decodeKey := buildKeyDecode(reg, req.Topic)
 
-	go s.scanLoop(sessCtx, req, keyMatcher, valueMatcher, decode, partitionEnds, totalEst, emit)
+	go s.scanLoop(sessCtx, req, keyMatcher, valueMatcher, decode, decodeKey, partitionEnds, totalEst, emit)
 	return s, nil
 }
 
@@ -188,6 +250,7 @@ func (s *SearchSession) scanLoop(
 	req SearchRequest,
 	keyMatch, valueMatch matcher,
 	decode func([]byte) string,
+	decodeKey func([]byte) (string, string),
 	partitionEnds map[int32]int64,
 	totalEst int64,
 	emit EmitFunc,
@@ -265,14 +328,16 @@ func (s *SearchSession) scanLoop(
 
 				if keyMatched && valueMatched {
 					matched++
+					keyDisplay, keyDecoded := decodeKey(r.Key)
 					emit(matchPrefix, SearchMatch{
-						Topic:     r.Topic,
-						Partition: r.Partition,
-						Offset:    r.Offset,
-						Key:       rawKey,
-						Value:     displayValue,
-						Timestamp: r.Timestamp,
-						Headers:   convertHeaders(r.Headers),
+						Topic:      r.Topic,
+						Partition:  r.Partition,
+						Offset:     r.Offset,
+						Key:        keyDisplay,
+						DecodedKey: keyDecoded,
+						Value:      displayValue,
+						Timestamp:  r.Timestamp,
+						Headers:    convertHeaders(r.Headers),
 					})
 				}
 			}
@@ -314,18 +379,6 @@ func partitionEndsKeys(m map[int32]int64) []int32 {
 		keys = append(keys, k)
 	}
 	return keys
-}
-
-// safeString converts a byte slice to string. Uses base64 if the bytes
-// are not valid UTF-8.
-func safeString(b []byte) string {
-	if len(b) == 0 {
-		return ""
-	}
-	if utf8.Valid(b) {
-		return string(b)
-	}
-	return base64.StdEncoding.EncodeToString(b)
 }
 
 // convertHeaders converts franz-go record headers to our Header type.

@@ -15,6 +15,7 @@ import type { KafkaMessage } from '../model/types'
 interface Props {
   message: KafkaMessage | null
   decodedValue?: string | null
+  decodedKey?: string | null
   open: boolean
   onOpenChange: (v: boolean) => void
 }
@@ -42,13 +43,16 @@ function prettyJson(str: string): string {
   }
 }
 
-export function MessageDetailDialog({ message, decodedValue, open, onOpenChange }: Props) {
-  const [showRaw, setShowRaw] = useState(false)
+export function MessageDetailDialog({ message, decodedValue, decodedKey, open, onOpenChange }: Props) {
+  const [showRawValue, setShowRawValue] = useState(false)
+  const [showRawKey, setShowRawKey] = useState(false)
 
   if (!message) return null
 
-  const hasDecoded = decodedValue != null && decodedValue !== message.value
-  const displayValue = showRaw ? message.value : (decodedValue ?? message.value)
+  const hasDecodedValue = decodedValue != null && decodedValue !== message.value
+  const hasDecodedKey = decodedKey != null && decodedKey !== message.key
+  const displayValue = showRawValue ? message.value : (decodedValue ?? message.value)
+  const displayKey = showRawKey ? message.key : (decodedKey ?? message.key)
   const prettyValue = prettyJson(displayValue)
 
   return (
@@ -89,12 +93,24 @@ export function MessageDetailDialog({ message, decodedValue, open, onOpenChange 
 
           {/* Key */}
           <div className="space-y-1">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <span className="font-medium text-muted-foreground uppercase tracking-wide">Key</span>
-              {message.key && <CopyButton text={message.key} />}
+              <div className="flex items-center gap-1 ml-auto">
+                {hasDecodedKey && (
+                  <Button
+                    variant={showRawKey ? 'outline' : 'secondary'}
+                    size="sm"
+                    className="h-5 px-2 text-xs"
+                    onClick={() => setShowRawKey((v) => !v)}
+                  >
+                    {showRawKey ? 'Decoded' : 'Raw'}
+                  </Button>
+                )}
+                {displayKey && <CopyButton text={displayKey} />}
+              </div>
             </div>
             <div className="bg-muted/30 rounded p-2 font-mono">
-              {message.key || <span className="text-muted-foreground/50 italic">empty</span>}
+              {displayKey || <span className="text-muted-foreground/50 italic">empty</span>}
             </div>
           </div>
 
@@ -103,14 +119,14 @@ export function MessageDetailDialog({ message, decodedValue, open, onOpenChange 
             <div className="flex items-center gap-2">
               <span className="font-medium text-muted-foreground uppercase tracking-wide">Value</span>
               <div className="flex items-center gap-1 ml-auto">
-                {hasDecoded && (
+                {hasDecodedValue && (
                   <Button
-                    variant={showRaw ? 'outline' : 'secondary'}
+                    variant={showRawValue ? 'outline' : 'secondary'}
                     size="sm"
                     className="h-5 px-2 text-xs"
-                    onClick={() => setShowRaw((v) => !v)}
+                    onClick={() => setShowRawValue((v) => !v)}
                   >
-                    {showRaw ? 'Decoded' : 'Raw'}
+                    {showRawValue ? 'Decoded' : 'Raw'}
                   </Button>
                 )}
                 <CopyButton text={prettyValue} />

@@ -9,6 +9,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"kafkalet/internal/profile"
@@ -27,10 +28,19 @@ type Registry struct {
 	cache      map[int32]*list.Element
 	evictList  *list.List
 	maxEntries int
+	
+	// Subject cache for key schemas (subject → schema)
+	subjectCache     map[string]*list.Element
+	subjectEvictList *list.List
 }
 
 type lruEntry struct {
 	key   int32
+	value string
+}
+
+type lruStringEntry struct {
+	key   string
 	value string
 }
 
@@ -41,6 +51,9 @@ func New(url, username, password string, tlsConfig profile.TLSConfig) *Registry 
 		cache:      make(map[int32]*list.Element),
 		evictList:  list.New(),
 		maxEntries: defaultMaxEntries,
+		// Subject cache for key schemas
+		subjectCache:     make(map[string]*list.Element),
+		subjectEvictList: list.New(),
 	}
 	if username != "" {
 		r.auth = base64.StdEncoding.EncodeToString([]byte(username + ":" + password))
@@ -115,6 +128,79 @@ func (r *Registry) GetSchema(id int32) (string, error) {
 func (r *Registry) fetchSchema(id int32) (string, error) {
 	url := fmt.Sprintf("%s/schemas/ids/%d", r.url, id)
 	req, err := http.NewRequest(http.MethodGet, url, nil) //nolint:noctx
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Accept", "application/vnd.schemaregistry.v1+json")
+	if r.auth != "" {
+		req.Header.Set("Authorization", "Basic "+r.auth)
+	}
+
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("schema registry request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("schema registry HTTP %d: %s", resp.StatusCode, body)
+	}
+
+	var result struct {
+		Schema string `json:"schema"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", fmt.Errorf("decode schema response: %w", err)
+	}
+	if result.Schema == "" {
+		return "", fmt.Errorf("empty schema in registry response")
+	}
+	return result.Schema, nil
+}
+
+// GetSchemaBySubject returns the latest Avro schema for a subject.
+// Subject naming convention: "<topic>-key" for keys, "<topic>-value" for values.
+func (r *Registry) GetSchemaBySubject(subject string) (string, error) {
+	r.mu.Lock()
+	if el, ok := r.subjectCache[subject]; ok {
+		r.subjectEvictList.MoveToFront(el)
+		val := el.Value.(*lruStringEntry).value
+		r.mu.Unlock()
+		return val, nil
+	}
+	r.mu.Unlock()
+
+	schemaJSON, err := r.fetchSchemaBySubject(subject)
+	if err != nil {
+		return "", err
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if el, ok := r.subjectCache[subject]; ok {
+		r.subjectEvictList.MoveToFront(el)
+		return el.Value.(*lruStringEntry).value, nil
+	}
+
+	el := r.subjectEvictList.PushFront(&lruStringEntry{key: subject, value: schemaJSON})
+	r.subjectCache[subject] = el
+
+	if r.subjectEvictList.Len() > r.maxEntries {
+		oldest := r.subjectEvictList.Back()
+		if oldest != nil {
+			r.subjectEvictList.Remove(oldest)
+			delete(r.subjectCache, oldest.Value.(*lruStringEntry).key)
+		}
+	}
+
+	return schemaJSON, nil
+}
+
+func (r *Registry) fetchSchemaBySubject(subject string) (string, error) {
+	url := fmt.Sprintf("%s/subjects/%s/versions/latest", r.url, url.PathEscape(subject))
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
 	}

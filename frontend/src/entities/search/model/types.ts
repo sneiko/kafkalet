@@ -3,6 +3,7 @@ export interface SearchMatch {
   partition: number
   offset: number
   key: string
+  decodedKey: string
   value: string
   timestamp: string
   headers: { key: string; value: string }[]

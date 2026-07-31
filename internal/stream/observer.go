@@ -55,6 +55,7 @@ func (s *ObserverSession) IsPaused() bool {
 // newObserver creates an ObserverSession and starts the poll goroutine.
 // consumeOpts must include exactly one of kgo.ConsumeTopics or kgo.ConsumePartitions.
 // decode converts raw record value bytes to a display string (e.g. Avro → JSON).
+// decodeKey converts raw key bytes to (display, decoded) strings.
 // emit is called for each received message and must be goroutine-safe.
 func newObserver(
 	appCtx context.Context,
@@ -63,6 +64,7 @@ func newObserver(
 	password string,
 	consumeOpts []kgo.Opt,
 	decode func([]byte) string,
+	decodeKey func([]byte) (string, string),
 	emit func(KafkaMessage),
 ) (*ObserverSession, error) {
 	client, err := broker.NewClient(b, password, consumeOpts...)
@@ -78,11 +80,11 @@ func newObserver(
 		pauseCh:  make(chan struct{}),
 	}
 
-	go s.pollLoop(sessCtx, decode, emit)
+	go s.pollLoop(sessCtx, decode, decodeKey, emit)
 	return s, nil
 }
 
-func (s *ObserverSession) pollLoop(ctx context.Context, decode func([]byte) string, emit func(KafkaMessage)) {
+func (s *ObserverSession) pollLoop(ctx context.Context, decode func([]byte) string, decodeKey func([]byte) (string, string), emit func(KafkaMessage)) {
 	defer s.client.Close()
 
 	for {
@@ -111,14 +113,16 @@ func (s *ObserverSession) pollLoop(ctx context.Context, decode func([]byte) stri
 		})
 
 		fetches.EachRecord(func(r *kgo.Record) {
+			keyDisplay, keyDecoded := decodeKey(r.Key)
 			emit(KafkaMessage{
-				Topic:     r.Topic,
-				Partition: r.Partition,
-				Offset:    r.Offset,
-				Key:       safeString(r.Key),
-				Value:     decode(r.Value),
-				Timestamp: r.Timestamp,
-				Headers:   convertHeaders(r.Headers),
+				Topic:      r.Topic,
+				Partition:  r.Partition,
+				Offset:     r.Offset,
+				Key:        keyDisplay,
+				DecodedKey: keyDecoded,
+				Value:      decode(r.Value),
+				Timestamp:  r.Timestamp,
+				Headers:    convertHeaders(r.Headers),
 			})
 		})
 	}

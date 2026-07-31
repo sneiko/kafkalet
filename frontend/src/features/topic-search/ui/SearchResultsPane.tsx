@@ -25,6 +25,7 @@ function matchToMessage(m: SearchMatch): KafkaMessage {
     partition: m.partition,
     offset: m.offset,
     key: m.key,
+    decodedKey: m.decodedKey,
     value: m.value,
     timestamp: m.timestamp,
     headers: m.headers,
@@ -38,6 +39,7 @@ export function SearchResultsPane({ sessionId }: { sessionId: string }) {
   const removeSession = useSearchStore((s) => s.removeSession)
 
   const [selectedMessage, setSelectedMessage] = useState<KafkaMessage | null>(null)
+  const [selectedDecodedKey, setSelectedDecodedKey] = useState<string | null>(null)
 
   const parentRef = useRef<HTMLDivElement>(null)
   const matches = session?.matches ?? []
@@ -197,6 +199,7 @@ export function SearchResultsPane({ sessionId }: { sessionId: string }) {
                 <MessageRow
                   key={vItem.key}
                   message={msg}
+                  decodedKey={msg.decodedKey || null}
                   style={{
                     position: 'absolute',
                     top: vItem.start,
@@ -204,7 +207,10 @@ export function SearchResultsPane({ sessionId }: { sessionId: string }) {
                     right: 0,
                     height: `${vItem.size}px`,
                   }}
-                  onClick={() => setSelectedMessage(msg)}
+                  onClick={() => {
+                    setSelectedMessage(msg)
+                    setSelectedDecodedKey(msg.decodedKey || null)
+                  }}
                 />
               )
             })}
@@ -214,6 +220,7 @@ export function SearchResultsPane({ sessionId }: { sessionId: string }) {
 
       <MessageDetailDialog
         message={selectedMessage}
+        decodedKey={selectedDecodedKey}
         open={Boolean(selectedMessage)}
         onOpenChange={(v) => !v && setSelectedMessage(null)}
       />

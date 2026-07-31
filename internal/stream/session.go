@@ -2,6 +2,7 @@ package stream
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"time"
 	"unicode/utf8"
 
@@ -18,13 +19,14 @@ const (
 
 // KafkaMessage is the payload sent to the frontend via Wails events.
 type KafkaMessage struct {
-	Topic     string    `json:"topic"`
-	Partition int32     `json:"partition"`
-	Offset    int64     `json:"offset"`
-	Key       string    `json:"key"`   // UTF-8 text, or base64 if binary
-	Value     string    `json:"value"` // UTF-8 text, or base64 if binary
-	Timestamp time.Time `json:"timestamp"`
-	Headers   []Header  `json:"headers"`
+	Topic      string    `json:"topic"`
+	Partition  int32     `json:"partition"`
+	Offset     int64     `json:"offset"`
+	Key        string    `json:"key"`        // Raw: UTF-8 text, base64, or hex
+	DecodedKey string    `json:"decodedKey"` // Decoded Avro JSON, or hex, or empty
+	Value      string    `json:"value"`      // UTF-8 text, base64, or decoded Avro
+	Timestamp  time.Time `json:"timestamp"`
+	Headers    []Header  `json:"headers"`
 }
 
 // Header is a single Kafka record header.
@@ -49,6 +51,24 @@ func safeString(b []byte) string {
 		return string(b)
 	}
 	return base64.StdEncoding.EncodeToString(b)
+}
+
+// toHex converts bytes to human-readable hex string.
+// Example: []byte{0x00, 0x01, 0x02} → "00 01 02"
+func toHex(b []byte) string {
+	if len(b) == 0 {
+		return ""
+	}
+	hexStr := hex.EncodeToString(b)
+	// Insert spaces every 2 characters
+	result := make([]byte, 0, len(hexStr)+len(hexStr)/2)
+	for i := 0; i < len(hexStr); i += 2 {
+		if i > 0 {
+			result = append(result, ' ')
+		}
+		result = append(result, hexStr[i], hexStr[i+1])
+	}
+	return string(result)
 }
 
 // convertHeaders converts franz-go record headers to our Header type.

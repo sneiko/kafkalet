@@ -63,6 +63,7 @@ function StreamPaneInner() {
   const [commitResult, setCommitResult] = useState<string | null>(null)
   const [selectedMessage, setSelectedMessage] = useState<KafkaMessage | null>(null)
   const [selectedDecoded, setSelectedDecoded] = useState<string | null>(null)
+  const [selectedDecodedKey, setSelectedDecodedKey] = useState<string | null>(null)
   const [produceOpen, setProduceOpen] = useState(false)
 
   const messages = applyColumnFilter(allMessages, filter)
@@ -326,6 +327,7 @@ function StreamPaneInner() {
                   key={vItem.key}
                   message={msg}
                   decodedValue={applyPlugin(msg, session.topic, plugins)}
+                  decodedKey={msg.decodedKey || null}
                   style={{
                     position: 'absolute',
                     top: vItem.start,
@@ -337,6 +339,7 @@ function StreamPaneInner() {
                     const decoded = applyPlugin(msg, session.topic, plugins)
                     setSelectedMessage(msg)
                     setSelectedDecoded(decoded)
+                    setSelectedDecodedKey(msg.decodedKey || null)
                   }}
                 />
               )
@@ -348,6 +351,7 @@ function StreamPaneInner() {
       <MessageDetailDialog
         message={selectedMessage}
         decodedValue={selectedDecoded}
+        decodedKey={selectedDecodedKey}
         open={Boolean(selectedMessage)}
         onOpenChange={(v) => !v && setSelectedMessage(null)}
       />

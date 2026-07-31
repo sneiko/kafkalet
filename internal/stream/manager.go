@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -78,8 +79,10 @@ func (m *Manager) StartObserver(b profile.Broker, password, topic string, opts O
 	}
 
 	sessionID := uuid.NewString()
+	decodeKey := buildKeyDecode(opts.Registry, topic)
 	obs, err := newObserver(m.ctx, sessionID, b, password, consumeOpts,
 		buildDecode(opts.Registry),
+		decodeKey,
 		func(msg KafkaMessage) { m.emit("stream:"+sessionID, msg) },
 	)
 	if err != nil {
@@ -102,8 +105,10 @@ func (m *Manager) StartConsumer(b profile.Broker, password, topic string, opts C
 	}
 
 	sessionID := uuid.NewString()
+	decodeKey := buildKeyDecode(opts.Registry, topic)
 	cons, err := newConsumer(m.ctx, sessionID, b, password, topic, opts.GroupID, resetOffset,
 		buildDecode(opts.Registry),
+		decodeKey,
 		func(msg KafkaMessage) { m.emit("stream:"+sessionID, msg) },
 	)
 	if err != nil {
@@ -133,6 +138,41 @@ func buildDecode(reg *schema.Registry) func([]byte) string {
 			return decoded
 		}
 		return safeString(raw)
+	}
+}
+
+// buildKeyDecode returns a key-decode function backed by Schema Registry.
+// Returns (displayKey, decodedKey) where:
+// - displayKey: What to show in UI (decoded if available, otherwise hex/utf8)
+// - decodedKey: Decoded Avro JSON, or hex for binary, or empty
+func buildKeyDecode(reg *schema.Registry, topic string) func([]byte) (string, string) {
+	if reg == nil {
+		return func(raw []byte) (string, string) {
+			s := safeString(raw)
+			return s, ""
+		}
+	}
+	
+	return func(raw []byte) (string, string) {
+		if len(raw) == 0 {
+			return "", ""
+		}
+
+		// Try Avro decoding
+		decoded, ok, err := schema.TryDecodeAvroKey(reg, topic, raw)
+		if ok && err == nil {
+			return decoded, decoded
+		}
+
+		// Fall back to hex for binary data
+		if !utf8.Valid(raw) {
+			hexStr := toHex(raw)
+			return hexStr, hexStr
+		}
+
+		// UTF-8 string
+		s := string(raw)
+		return s, ""
 	}
 }
 

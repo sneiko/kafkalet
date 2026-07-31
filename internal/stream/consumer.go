@@ -61,6 +61,7 @@ func (s *ConsumerSession) Commit(ctx context.Context) error {
 
 // newConsumer creates a ConsumerSession and starts the poll goroutine.
 // decode converts raw record value bytes to a display string (e.g. Avro → JSON).
+// decodeKey converts raw key bytes (display, decoded) strings.
 func newConsumer(
 	appCtx context.Context,
 	sessionID string,
@@ -70,6 +71,7 @@ func newConsumer(
 	groupID string,
 	resetOffset kgo.Offset,
 	decode func([]byte) string,
+	decodeKey func([]byte) (string, string),
 	emit func(KafkaMessage),
 ) (*ConsumerSession, error) {
 	client, err := broker.NewClient(b, password,
@@ -91,11 +93,11 @@ func newConsumer(
 		pauseCh:  make(chan struct{}),
 	}
 
-	go s.pollLoop(sessCtx, decode, emit)
+	go s.pollLoop(sessCtx, decode, decodeKey, emit)
 	return s, nil
 }
 
-func (s *ConsumerSession) pollLoop(ctx context.Context, decode func([]byte) string, emit func(KafkaMessage)) {
+func (s *ConsumerSession) pollLoop(ctx context.Context, decode func([]byte) string, decodeKey func([]byte) (string, string), emit func(KafkaMessage)) {
 	defer s.client.Close()
 
 	for {
@@ -126,14 +128,16 @@ func (s *ConsumerSession) pollLoop(ctx context.Context, decode func([]byte) stri
 		fetches.EachRecord(func(r *kgo.Record) {
 			// Mark the record so it can be committed via CommitUncommittedOffsets.
 			s.client.MarkCommitRecords(r)
+			keyDisplay, keyDecoded := decodeKey(r.Key)
 			emit(KafkaMessage{
-				Topic:     r.Topic,
-				Partition: r.Partition,
-				Offset:    r.Offset,
-				Key:       safeString(r.Key),
-				Value:     decode(r.Value),
-				Timestamp: r.Timestamp,
-				Headers:   convertHeaders(r.Headers),
+				Topic:      r.Topic,
+				Partition:  r.Partition,
+				Offset:     r.Offset,
+				Key:        keyDisplay,
+				DecodedKey: keyDecoded,
+				Value:      decode(r.Value),
+				Timestamp:  r.Timestamp,
+				Headers:    convertHeaders(r.Headers),
 			})
 		})
 	}

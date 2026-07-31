@@ -327,6 +327,25 @@ func (a *App) ExportSettings(includeSecrets bool) error {
 	return os.WriteFile(path, data, 0o600)
 }
 
+// SaveTextFile opens a native save dialog and writes text content to the chosen
+// path. Used to export messages (CSV/JSON): blob/anchor downloads triggered from
+// the frontend do not work inside the WebKit webview, so the export must be
+// written through the OS file dialog instead. Returns nil if the user cancels.
+func (a *App) SaveTextFile(defaultName, content string) error {
+	path, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		DefaultFilename: defaultName,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "CSV Files", Pattern: "*.csv"},
+			{DisplayName: "JSON Files", Pattern: "*.json"},
+			{DisplayName: "All Files", Pattern: "*"},
+		},
+	})
+	if err != nil || path == "" {
+		return err
+	}
+	return os.WriteFile(path, []byte(content), 0o600)
+}
+
 // ImportSettings reads profiles from a user-chosen JSON file and merges them
 // (adds profiles not already present by ID), restoring passwords to keychain.
 // SelectCertificateFile opens a native file dialog for selecting certificate/key files.

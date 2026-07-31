@@ -83,7 +83,6 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const pinnedTopics = broker?.pinnedTopics ?? []
 
   const load = useCallback(async (force?: boolean) => {
-    setLoading(true)
     try {
       if (force) await InvalidateTopicsCache(brokerId)
       const result = await ListTopics(profileId, brokerId)
@@ -96,6 +95,13 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
     }
   }, [profileId, brokerId])
 
+  // Clear topics and start loading when broker changes
+  useEffect(() => {
+    setTopics([])
+    setLoading(true)
+  }, [brokerId])
+
+  // Load topics after clearing
   useEffect(() => {
     load()
   }, [load])

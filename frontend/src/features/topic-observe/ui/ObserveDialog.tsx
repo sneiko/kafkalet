@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Loader2, Radio } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
@@ -40,6 +40,18 @@ export function ObserveDialog({
   const [error, setError] = useState<string | null>(null)
 
   const addSession = useSessionStore((s) => s.addSession)
+
+  useEffect(() => {
+    if (startMode === 'timestamp' && !timestamp) {
+      const now = new Date()
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)
+      const year = today.getFullYear()
+      const month = String(today.getMonth() + 1).padStart(2, '0')
+      const day = String(today.getDate()).padStart(2, '0')
+      const isoString = `${year}-${month}-${day}T00:00`
+      setTimestamp(isoString)
+    }
+  }, [startMode, timestamp])
 
   const handleStart = async () => {
     setLoading(true)

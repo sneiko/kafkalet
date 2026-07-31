@@ -15,13 +15,14 @@ import { useSessionStore } from '@entities/session'
 import { useSearchStore } from '@entities/search'
 import { SearchResultsPane } from '@features/topic-search'
 import { MessageRow, MessageDetailDialog } from '@entities/message'
-import type { KafkaMessage, SortField } from '@entities/message'
-import { applyColumnFilter, DEFAULT_SORT, EMPTY_COLUMN_FILTER } from '@entities/message'
+import type { GlobalContainsFilter, KafkaMessage, SortField } from '@entities/message'
+import { applyColumnFilter, DEFAULT_SORT, EMPTY_COLUMN_FILTER, EMPTY_GLOBAL_FILTER, isGlobalFilterActive } from '@entities/message'
 import { ColumnHeader } from '@features/message-column-header'
 import { exportAsJson, exportAsCsv } from '@shared/lib/exportMessages'
 import { usePluginStore } from '@entities/plugin'
 import { applyPlugin } from '@shared/lib/applyPlugin'
 import { ProduceDialog } from '@features/message-produce'
+import { GlobalFilterButton } from '@features/message-global-filter'
 
 const ROW_HEIGHT = 36
 
@@ -45,7 +46,7 @@ export function StreamPane() {
 }
 
 function StreamPaneInner() {
-  const { sessions, activeSessionId, mergeMessages, removeSession, clearMessages, setSessionPaused } =
+  const { sessions, activeSessionId, mergeMessages, removeSession, clearMessages, setSessionPaused, setGlobalFilter } =
     useSessionStore()
   const plugins = usePluginStore((s) => s.plugins)
 
@@ -54,6 +55,7 @@ function StreamPaneInner() {
 
   const sort = useSessionStore((s) => (topic ? s.getSort(topic) : DEFAULT_SORT))
   const filter = useSessionStore((s) => (topic ? s.getFilter(topic) : EMPTY_COLUMN_FILTER))
+  const globalFilter = useSessionStore((s) => (topic ? s.getGlobalFilter(topic) : undefined)) ?? EMPTY_GLOBAL_FILTER
   const setSort = useSessionStore((s) => s.setSort)
   const setFilter = useSessionStore((s) => s.setFilter)
 
@@ -66,7 +68,7 @@ function StreamPaneInner() {
   const [selectedDecodedKey, setSelectedDecodedKey] = useState<string | null>(null)
   const [produceOpen, setProduceOpen] = useState(false)
 
-  const messages = applyColumnFilter(allMessages, filter)
+  const messages = applyColumnFilter(allMessages, filter, globalFilter)
 
   const parentRef = useRef<HTMLDivElement>(null)
 
@@ -180,7 +182,7 @@ function StreamPaneInner() {
     )
   }
 
-  const hasFilter = messages.length !== allMessages.length
+  const hasFilter = messages.length !== allMessages.length || isGlobalFilterActive(globalFilter)
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
@@ -260,6 +262,11 @@ function StreamPaneInner() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <GlobalFilterButton
+          filter={globalFilter}
+          onChange={(f: GlobalContainsFilter) => setGlobalFilter(session.topic, f)}
+        />
 
         <IconButton
           variant="ghost"

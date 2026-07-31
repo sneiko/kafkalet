@@ -5,11 +5,14 @@ export type {
   OffsetFilter,
   TimestampFilter,
   ColumnFilterState,
+  GlobalContainsFilter,
 } from './model/filter'
 export {
   EMPTY_COLUMN_FILTER,
+  EMPTY_GLOBAL_FILTER,
   isOffsetFilterActive,
   isTimestampFilterActive,
+  isGlobalFilterActive,
 } from './model/filter'
 export { getComparator } from './lib/compareMessages'
 export { applyColumnFilter } from './lib/applyColumnFilter'

@@ -26,13 +26,14 @@ type SearchProgress struct {
 
 // SearchMatch is emitted for each message that matches the search pattern.
 type SearchMatch struct {
-	Topic     string    `json:"topic"`
-	Partition int32     `json:"partition"`
-	Offset    int64     `json:"offset"`
-	Key       string    `json:"key"`
-	Value     string    `json:"value"`
-	Timestamp time.Time `json:"timestamp"`
-	Headers   []Header  `json:"headers"`
+	Topic      string    `json:"topic"`
+	Partition  int32     `json:"partition"`
+	Offset     int64     `json:"offset"`
+	Key        string    `json:"key"`
+	DecodedKey string    `json:"decodedKey"`
+	Value      string    `json:"value"`
+	Timestamp  time.Time `json:"timestamp"`
+	Headers    []Header  `json:"headers"`
 }
 
 // Header is a single Kafka record header.

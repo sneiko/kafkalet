@@ -42,6 +42,96 @@ type GroupLag struct {
 	Partitions []PartitionLag `json:"partitions"`
 }
 
+// TopicMessageCount represents the message count for a topic.
+type TopicMessageCount struct {
+	Topic      string            `json:"topic"`
+	Total      int64             `json:"total"`
+	Partitions []PartitionCount  `json:"partitions"`
+}
+
+// PartitionCount is the message count for one partition.
+type PartitionCount struct {
+	Partition int32 `json:"partition"`
+	Count     int64 `json:"count"`
+}
+
+// CountTopicMessagesOptions contains options for message counting.
+type CountTopicMessagesOptions struct {
+	AvailableOnly bool `json:"availableOnly"` // If true, returns endOffset - startOffset; otherwise returns endOffset
+}
+
+// CountTopicMessages returns the total message count and per-partition counts for a topic.
+func CountTopicMessages(ctx context.Context, client *kgo.Client, topic string, opts CountTopicMessagesOptions) (TopicMessageCount, error) {
+	adm := kadm.NewClient(client)
+
+	endOffsets, err := adm.ListEndOffsets(ctx, topic)
+	if err != nil {
+		return TopicMessageCount{}, fmt.Errorf("list end offsets: %w", err)
+	}
+
+	result := TopicMessageCount{
+		Topic:      topic,
+		Partitions: make([]PartitionCount, 0),
+	}
+
+	topicEndOffsets, ok := endOffsets[topic]
+	if !ok {
+		return result, nil
+	}
+
+	if opts.AvailableOnly {
+		startOffsets, err := adm.ListStartOffsets(ctx, topic)
+		if err != nil {
+			return TopicMessageCount{}, fmt.Errorf("list start offsets: %w", err)
+		}
+
+		topicStartOffsets, ok := startOffsets[topic]
+		if !ok {
+			return result, nil
+		}
+
+		for partition, endOffset := range topicEndOffsets {
+			if endOffset.Err != nil {
+				continue
+			}
+			startOffset, exists := topicStartOffsets[partition]
+			if !exists || startOffset.Err != nil {
+				continue
+			}
+
+			count := endOffset.Offset - startOffset.Offset
+			if count < 0 {
+				count = 0
+			}
+
+			pc := PartitionCount{
+				Partition: partition,
+				Count:     count,
+			}
+			result.Partitions = append(result.Partitions, pc)
+			result.Total += count
+		}
+	} else {
+		for partition, endOffset := range topicEndOffsets {
+			if endOffset.Err != nil {
+				continue
+			}
+			pc := PartitionCount{
+				Partition: partition,
+				Count:     endOffset.Offset,
+			}
+			result.Partitions = append(result.Partitions, pc)
+			result.Total += endOffset.Offset
+		}
+	}
+
+	sort.Slice(result.Partitions, func(i, j int) bool {
+		return result.Partitions[i].Partition < result.Partitions[j].Partition
+	})
+
+	return result, nil
+}
+
 // Topic is a Kafka topic with basic metadata returned to the frontend.
 type Topic struct {
 	Name       string `json:"name"`

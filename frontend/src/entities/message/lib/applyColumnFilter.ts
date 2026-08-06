@@ -1,5 +1,6 @@
 import type { KafkaMessage } from '../model/types'
-import type { ColumnFilterState, OffsetFilter, TimestampFilter } from '../model/filter'
+import type { ColumnFilterState, GlobalContainsFilter, OffsetFilter, TimestampFilter } from '../model/filter'
+import { EMPTY_GLOBAL_FILTER } from '../model/filter'
 
 function tryRegex(pattern: string): RegExp | null {
   try {
@@ -50,15 +51,37 @@ function matchesText(field: string, pattern: string): boolean {
   return re ? re.test(field) : field.toLowerCase().includes(pattern.toLowerCase())
 }
 
+function matchesGlobalFilter(
+  msg: KafkaMessage,
+  globalFilter: GlobalContainsFilter,
+): boolean {
+  if (!globalFilter.enabled || !globalFilter.pattern.trim()) return true
+
+  const pattern = globalFilter.pattern.toLowerCase()
+  const key = msg.key.toLowerCase()
+  const value = msg.value.toLowerCase()
+
+  switch (globalFilter.target) {
+    case 'key':
+      return key.includes(pattern)
+    case 'value':
+      return value.includes(pattern)
+    case 'both':
+      return key.includes(pattern) || value.includes(pattern)
+  }
+}
+
 export function applyColumnFilter(
   messages: KafkaMessage[],
   filter: ColumnFilterState,
+  globalFilter?: GlobalContainsFilter,
 ): KafkaMessage[] {
   return messages.filter(
     (msg) =>
       matchesOffset(msg, filter.offset) &&
       matchesTimestamp(msg, filter.timestamp) &&
       matchesText(msg.key, filter.key) &&
-      matchesText(msg.value, filter.value),
+      matchesText(msg.value, filter.value) &&
+      matchesGlobalFilter(msg, globalFilter ?? EMPTY_GLOBAL_FILTER),
   )
 }

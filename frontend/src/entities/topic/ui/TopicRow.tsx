@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Play, Users, Send, Info, Search, MoreHorizontal, Trash2, Star } from 'lucide-react'
+import { Play, Users, Send, Info, Search, MoreHorizontal, Trash2, Star, Hash } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import {
   DropdownMenu,
@@ -19,11 +19,12 @@ interface Props {
   onProduce: (topic: Topic) => void
   onSearch: (topic: Topic) => void
   onInfo: (topic: Topic) => void
+  onCountMessages?: (topic: Topic) => void
   onDelete?: (topic: Topic) => void
   onTogglePin?: (topic: Topic) => void
 }
 
-export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProduce, onSearch, onInfo, onDelete, onTogglePin }: Props) {
+export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProduce, onSearch, onInfo, onCountMessages, onDelete, onTogglePin }: Props) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -78,30 +79,36 @@ export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProdu
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="text-xs">
-          <DropdownMenuItem onClick={() => onObserve(topic)}>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onObserve(topic); }}>
             <Play className="mr-2 h-3 w-3" />
             Observe
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onConsume(topic)}>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onConsume(topic); }}>
             <Users className="mr-2 h-3 w-3" />
             Consume
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onProduce(topic)}>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onProduce(topic); }}>
             <Send className="mr-2 h-3 w-3" />
             Produce
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onSearch(topic)}>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSearch(topic); }}>
             <Search className="mr-2 h-3 w-3" />
             Search
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => onInfo(topic)}>
+          <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onInfo(topic); }}>
             <Info className="mr-2 h-3 w-3" />
             Topic Info
           </DropdownMenuItem>
+          {onCountMessages && (
+            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onCountMessages(topic); }}>
+              <Hash className="mr-2 h-3 w-3" />
+              Count Messages
+            </DropdownMenuItem>
+          )}
           {onTogglePin && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onTogglePin(topic)}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onTogglePin(topic); }}>
                 <Star className={cn('mr-2 h-3 w-3', pinned && 'fill-current text-yellow-500')} />
                 {pinned ? 'Unpin topic' : 'Pin topic'}
               </DropdownMenuItem>
@@ -112,7 +119,7 @@ export function TopicRow({ topic, focused, pinned, onObserve, onConsume, onProdu
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive focus:text-destructive"
-                onClick={() => onDelete(topic)}
+                onClick={(e) => { e.stopPropagation(); onDelete(topic); }}
               >
                 <Trash2 className="mr-2 h-3 w-3" />
                 Delete

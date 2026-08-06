@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { Square, Trash2, CheckCheck, Loader2, Download, SendHorizonal } from 'lucide-react'
+import { Square, Trash2, CheckCheck, Loader2, Download, SendHorizonal, Pause, Play } from 'lucide-react'
 
 import { Button } from '@/shared/ui/button'
 import { IconButton } from '@/shared/ui/icon-button'
@@ -10,18 +10,19 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
-import { EventsOn, StopSession, CommitSession } from '@shared/api'
+import { EventsOn, StopSession, CommitSession, PauseSession, ResumeSession } from '@shared/api'
 import { useSessionStore } from '@entities/session'
 import { useSearchStore } from '@entities/search'
 import { SearchResultsPane } from '@features/topic-search'
 import { MessageRow, MessageDetailDialog } from '@entities/message'
-import type { KafkaMessage, SortField } from '@entities/message'
-import { applyColumnFilter, DEFAULT_SORT, EMPTY_COLUMN_FILTER } from '@entities/message'
+import type { GlobalContainsFilter, KafkaMessage, SortField } from '@entities/message'
+import { applyColumnFilter, DEFAULT_SORT, EMPTY_COLUMN_FILTER, EMPTY_GLOBAL_FILTER, isGlobalFilterActive } from '@entities/message'
 import { ColumnHeader } from '@features/message-column-header'
 import { exportAsJson, exportAsCsv } from '@shared/lib/exportMessages'
 import { usePluginStore } from '@entities/plugin'
 import { applyPlugin } from '@shared/lib/applyPlugin'
 import { ProduceDialog } from '@features/message-produce'
+import { GlobalFilterButton } from '@features/message-global-filter'
 
 const ROW_HEIGHT = 36
 
@@ -45,7 +46,7 @@ export function StreamPane() {
 }
 
 function StreamPaneInner() {
-  const { sessions, activeSessionId, mergeMessages, removeSession, clearMessages } =
+  const { sessions, activeSessionId, mergeMessages, removeSession, clearMessages, setSessionPaused, setGlobalFilter } =
     useSessionStore()
   const plugins = usePluginStore((s) => s.plugins)
 
@@ -54,6 +55,7 @@ function StreamPaneInner() {
 
   const sort = useSessionStore((s) => (topic ? s.getSort(topic) : DEFAULT_SORT))
   const filter = useSessionStore((s) => (topic ? s.getFilter(topic) : EMPTY_COLUMN_FILTER))
+  const globalFilter = useSessionStore((s) => (topic ? s.getGlobalFilter(topic) : undefined)) ?? EMPTY_GLOBAL_FILTER
   const setSort = useSessionStore((s) => s.setSort)
   const setFilter = useSessionStore((s) => s.setFilter)
 
@@ -63,9 +65,10 @@ function StreamPaneInner() {
   const [commitResult, setCommitResult] = useState<string | null>(null)
   const [selectedMessage, setSelectedMessage] = useState<KafkaMessage | null>(null)
   const [selectedDecoded, setSelectedDecoded] = useState<string | null>(null)
+  const [selectedDecodedKey, setSelectedDecodedKey] = useState<string | null>(null)
   const [produceOpen, setProduceOpen] = useState(false)
 
-  const messages = applyColumnFilter(allMessages, filter)
+  const messages = applyColumnFilter(allMessages, filter, globalFilter)
 
   const parentRef = useRef<HTMLDivElement>(null)
 
@@ -100,6 +103,8 @@ function StreamPaneInner() {
   // RAF-batched merge to keep sort cost amortized under high throughput.
   useEffect(() => {
     if (!activeSessionId) return
+    const session = sessions[activeSessionId]
+    if (!session || session.paused) return
     setCommitResult(null)
 
     const pending: KafkaMessage[] = []
@@ -113,6 +118,10 @@ function StreamPaneInner() {
     }
 
     const unsubscribe = EventsOn(`stream:${activeSessionId}`, (msg: KafkaMessage) => {
+      // Ignore messages if session is paused
+      const currentSession = sessions[activeSessionId]
+      if (currentSession?.paused) return
+      
       pending.push(msg)
       if (rafHandle == null) {
         rafHandle = requestAnimationFrame(flush)
@@ -124,12 +133,26 @@ function StreamPaneInner() {
       if (rafHandle != null) cancelAnimationFrame(rafHandle)
       if (pending.length > 0) mergeMessages(activeSessionId, pending)
     }
-  }, [activeSessionId, mergeMessages])
+  }, [activeSessionId, mergeMessages, sessions])
 
   const handleStop = async () => {
     if (!activeSessionId) return
     await StopSession(activeSessionId)
     removeSession(activeSessionId)
+  }
+
+  const handlePause = async () => {
+    if (!activeSessionId) return
+    const session = sessions[activeSessionId]
+    if (!session) return
+    
+    if (session.paused) {
+      await ResumeSession(activeSessionId)
+      setSessionPaused(activeSessionId, false)
+    } else {
+      await PauseSession(activeSessionId)
+      setSessionPaused(activeSessionId, true)
+    }
   }
 
   const handleClear = () => {
@@ -159,7 +182,7 @@ function StreamPaneInner() {
     )
   }
 
-  const hasFilter = messages.length !== allMessages.length
+  const hasFilter = messages.length !== allMessages.length || isGlobalFilterActive(globalFilter)
 
   return (
     <div className="flex flex-1 min-h-0 flex-col">
@@ -240,6 +263,11 @@ function StreamPaneInner() {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        <GlobalFilterButton
+          filter={globalFilter}
+          onChange={(f: GlobalContainsFilter) => setGlobalFilter(session.topic, f)}
+        />
+
         <IconButton
           variant="ghost"
           size="icon"
@@ -248,6 +276,19 @@ function StreamPaneInner() {
           tooltip="Clear messages"
         >
           <Trash2 className="h-3.5 w-3.5" />
+        </IconButton>
+        <IconButton
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6"
+          onClick={handlePause}
+          tooltip={session.paused ? 'Resume session' : 'Pause session'}
+        >
+          {session.paused ? (
+            <Play className="h-3.5 w-3.5 fill-current" />
+          ) : (
+            <Pause className="h-3.5 w-3.5 fill-current" />
+          )}
         </IconButton>
         <IconButton
           variant="ghost"
@@ -293,6 +334,7 @@ function StreamPaneInner() {
                   key={vItem.key}
                   message={msg}
                   decodedValue={applyPlugin(msg, session.topic, plugins)}
+                  decodedKey={msg.decodedKey || null}
                   style={{
                     position: 'absolute',
                     top: vItem.start,
@@ -304,6 +346,7 @@ function StreamPaneInner() {
                     const decoded = applyPlugin(msg, session.topic, plugins)
                     setSelectedMessage(msg)
                     setSelectedDecoded(decoded)
+                    setSelectedDecodedKey(msg.decodedKey || null)
                   }}
                 />
               )
@@ -315,6 +358,7 @@ function StreamPaneInner() {
       <MessageDetailDialog
         message={selectedMessage}
         decodedValue={selectedDecoded}
+        decodedKey={selectedDecodedKey}
         open={Boolean(selectedMessage)}
         onOpenChange={(v) => !v && setSelectedMessage(null)}
       />

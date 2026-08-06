@@ -40,8 +40,9 @@ type Broker struct {
 // SchemaRegistryConfig holds connection settings for a Confluent-compatible Schema Registry.
 // The password (for HTTP Basic auth) lives in the OS keychain.
 type SchemaRegistryConfig struct {
-	URL      string `json:"url"`      // e.g. http://localhost:8081; empty = disabled
-	Username string `json:"username"` // optional, for Basic auth
+	URL      string    `json:"url"`      // e.g. http://localhost:8081; empty = disabled
+	Username string    `json:"username"` // optional, for Basic auth
+	TLS      TLSConfig `json:"tls"`      // TLS settings for HTTPS Schema Registry
 }
 
 // SASLConfig holds SASL auth params. The password/token lives in the OS keychain.
@@ -66,4 +67,6 @@ type TLSConfig struct {
 	CACertPath         string `json:"caCertPath"`
 	ClientCertPath     string `json:"clientCertPath"`
 	ClientKeyPath      string `json:"clientKeyPath"`
+	TruststorePath     string `json:"truststorePath"`     // JKS or PKCS12 file path
+	TruststorePassword string `json:"truststorePassword"` // stored in keychain
 }

@@ -18,6 +18,8 @@ import {
   AddBroker,
   UpdateBroker,
   SetSchemaRegistryPassword,
+  SetSchemaRegistryTruststorePassword,
+  SetTruststorePassword,
   TestBrokerConnection,
   TestConnectionDirect,
   AddBrokerCredential,
@@ -53,13 +55,24 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
       name: broker?.name ?? '',
       addresses: broker?.addresses.join(', ') ?? '',
       tlsEnabled: broker?.tls.enabled ?? false,
+      tlsUseTruststore: broker ? (broker.tls.truststorePath !== '') : false,
       tlsCaCertPath: broker?.tls.caCertPath ?? '',
       tlsClientCertPath: broker?.tls.clientCertPath ?? '',
       tlsClientKeyPath: broker?.tls.clientKeyPath ?? '',
       tlsInsecureSkipVerify: broker?.tls.insecureSkipVerify ?? false,
+      tlsTruststorePath: broker?.tls.truststorePath ?? '',
+      tlsTruststorePassword: '',
       srUrl: broker?.schemaRegistry?.url ?? '',
       srUsername: broker?.schemaRegistry?.username ?? '',
       srPassword: '',
+      srTlsEnabled: broker?.schemaRegistry?.tls?.enabled ?? false,
+      srTlsUseTruststore: broker ? (broker.schemaRegistry?.tls?.truststorePath !== '') : false,
+      srTlsCaCertPath: broker?.schemaRegistry?.tls?.caCertPath ?? '',
+      srTlsClientCertPath: broker?.schemaRegistry?.tls?.clientCertPath ?? '',
+      srTlsClientKeyPath: broker?.schemaRegistry?.tls?.clientKeyPath ?? '',
+      srTlsInsecureSkipVerify: broker?.schemaRegistry?.tls?.insecureSkipVerify ?? false,
+      srTlsTruststorePath: broker?.schemaRegistry?.tls?.truststorePath ?? '',
+      srTlsTruststorePassword: '',
       initialCredName: '',
       initialCredMechanism: 'NONE',
       initialCredUsername: '',
@@ -71,19 +84,30 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
     },
   })
 
-  useEffect(() => {
+useEffect(() => {
     if (open) {
       form.reset({
         name: broker?.name ?? '',
         addresses: broker?.addresses.join(', ') ?? '',
         tlsEnabled: broker?.tls.enabled ?? false,
+        tlsUseTruststore: broker ? (broker.tls.truststorePath !== '') : false,
         tlsCaCertPath: broker?.tls.caCertPath ?? '',
         tlsClientCertPath: broker?.tls.clientCertPath ?? '',
         tlsClientKeyPath: broker?.tls.clientKeyPath ?? '',
         tlsInsecureSkipVerify: broker?.tls.insecureSkipVerify ?? false,
+        tlsTruststorePath: broker?.tls.truststorePath ?? '',
+        tlsTruststorePassword: '',
         srUrl: broker?.schemaRegistry?.url ?? '',
         srUsername: broker?.schemaRegistry?.username ?? '',
         srPassword: '',
+        srTlsEnabled: broker?.schemaRegistry?.tls?.enabled ?? false,
+        srTlsUseTruststore: broker ? (broker.schemaRegistry?.tls?.truststorePath !== '') : false,
+        srTlsCaCertPath: broker?.schemaRegistry?.tls?.caCertPath ?? '',
+        srTlsClientCertPath: broker?.schemaRegistry?.tls?.clientCertPath ?? '',
+        srTlsClientKeyPath: broker?.schemaRegistry?.tls?.clientKeyPath ?? '',
+        srTlsInsecureSkipVerify: broker?.schemaRegistry?.tls?.insecureSkipVerify ?? false,
+        srTlsTruststorePath: broker?.schemaRegistry?.tls?.truststorePath ?? '',
+        srTlsTruststorePassword: '',
         initialCredName: '',
         initialCredMechanism: 'NONE',
         initialCredUsername: '',
@@ -112,21 +136,33 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
     }
 
     const addresses = values.addresses.split(',').map((s) => s.trim()).filter(Boolean)
+    const tlsEnabled = values.tlsEnabled || values.tlsUseTruststore
     const brokerData: Broker = {
       id: broker?.id ?? '',
       name: values.name,
       addresses,
       sasl: { mechanism: '', username: '' },
       tls: {
-        enabled: values.tlsEnabled,
+        enabled: tlsEnabled,
         insecureSkipVerify: values.tlsInsecureSkipVerify,
-        caCertPath: values.tlsCaCertPath,
-        clientCertPath: values.tlsClientCertPath,
-        clientKeyPath: values.tlsClientKeyPath,
+        caCertPath: values.tlsUseTruststore ? '' : values.tlsCaCertPath,
+        clientCertPath: values.tlsUseTruststore ? '' : values.tlsClientCertPath,
+        clientKeyPath: values.tlsUseTruststore ? '' : values.tlsClientKeyPath,
+        truststorePath: values.tlsUseTruststore ? values.tlsTruststorePath : '',
+        truststorePassword: values.tlsUseTruststore ? values.tlsTruststorePassword : '',
       },
       schemaRegistry: {
         url: values.srUrl.trim(),
         username: values.srUsername,
+        tls: {
+          enabled: values.srTlsEnabled || values.srTlsUseTruststore,
+          insecureSkipVerify: values.srTlsInsecureSkipVerify,
+          caCertPath: values.srTlsUseTruststore ? '' : values.srTlsCaCertPath,
+          clientCertPath: values.srTlsUseTruststore ? '' : values.srTlsClientCertPath,
+          clientKeyPath: values.srTlsUseTruststore ? '' : values.srTlsClientKeyPath,
+          truststorePath: values.srTlsUseTruststore ? values.srTlsTruststorePath : '',
+          truststorePassword: values.srTlsUseTruststore ? values.srTlsTruststorePassword : '',
+        },
       },
       credentials: broker?.credentials,
       activeCredentialID: broker?.activeCredentialID,
@@ -141,8 +177,24 @@ export function BrokerFormDialog({ profileId, broker, open, onOpenChange }: Prop
         savedBroker = await AddBroker(profileId, brokerData as unknown as profile.Broker) as unknown as Broker
       }
 
-      if (values.srPassword) {
+if (values.srPassword) {
         await SetSchemaRegistryPassword(profileId, savedBroker.id, values.srPassword)
+      }
+
+      // Save Schema Registry truststore password (only if provided, keep existing if empty in edit mode)
+      if (values.srTlsUseTruststore) {
+        if (values.srTlsTruststorePassword) {
+          await SetSchemaRegistryTruststorePassword(profileId, savedBroker.id, values.srTlsTruststorePassword)
+        }
+        // In edit mode with empty password field, keep existing password - do nothing
+      }
+
+      // Save Broker TLS truststore password (only if provided, keep existing if empty in edit mode)
+      if (values.tlsUseTruststore) {
+        if (values.tlsTruststorePassword) {
+          await SetTruststorePassword(profileId, savedBroker.id, values.tlsTruststorePassword)
+        }
+        // In edit mode with empty password field, keep existing password - do nothing
       }
 
       // Add initial credential for new brokers (skip if no auth)

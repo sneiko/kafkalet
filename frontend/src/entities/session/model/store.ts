@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import type {
   ColumnFilterState,
+  GlobalContainsFilter,
   KafkaMessage,
   SortState,
 } from '@entities/message'
-import { DEFAULT_SORT, EMPTY_COLUMN_FILTER, getComparator } from '@entities/message'
+import { DEFAULT_SORT, EMPTY_COLUMN_FILTER, EMPTY_GLOBAL_FILTER, getComparator } from '@entities/message'
 
 const MAX_MESSAGES = 10_000
 
@@ -18,6 +19,7 @@ export interface StreamSession {
   mode: 'observer' | 'consumer'
   groupId?: string
   messages: KafkaMessage[]
+  paused?: boolean
 }
 
 interface SessionState {
@@ -25,16 +27,20 @@ interface SessionState {
   activeSessionId: string | null
   sortByTopic: Record<string, SortState>
   filterByTopic: Record<string, ColumnFilterState>
+  globalFilterByTopic: Record<string, GlobalContainsFilter>
 
   addSession: (s: Omit<StreamSession, 'messages'>) => void
   removeSession: (id: string) => void
   mergeMessages: (sessionId: string, batch: KafkaMessage[]) => void
   setActiveSessionId: (id: string | null) => void
   clearMessages: (sessionId: string) => void
+  setSessionPaused: (id: string, paused: boolean) => void
   getSort: (topic: string) => SortState
   setSort: (topic: string, sort: SortState) => void
   getFilter: (topic: string) => ColumnFilterState
   setFilter: (topic: string, filter: ColumnFilterState) => void
+  getGlobalFilter: (topic: string) => GlobalContainsFilter
+  setGlobalFilter: (topic: string, filter: GlobalContainsFilter) => void
 }
 
 function mergeSorted(
@@ -71,12 +77,22 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   activeSessionId: null,
   sortByTopic: {},
   filterByTopic: {},
+  globalFilterByTopic: {},
 
   addSession: (s) =>
     set((state) => ({
-      sessions: { ...state.sessions, [s.id]: { ...s, messages: [] } },
+      sessions: { ...state.sessions, [s.id]: { ...s, messages: [], paused: false } },
       activeSessionId: s.id,
     })),
+
+  setSessionPaused: (id, paused) =>
+    set((state) => {
+      const session = state.sessions[id]
+      if (!session) return state
+      return {
+        sessions: { ...state.sessions, [id]: { ...session, paused } },
+      }
+    }),
 
   removeSession: (id) =>
     set((state) => {
@@ -141,5 +157,12 @@ export const useSessionStore = create<SessionState>((set, get) => ({
   setFilter: (topic, filter) =>
     set((state) => ({
       filterByTopic: { ...state.filterByTopic, [topic]: filter },
+    })),
+
+  getGlobalFilter: (topic) => get().globalFilterByTopic[topic] ?? EMPTY_GLOBAL_FILTER,
+
+  setGlobalFilter: (topic, filter) =>
+    set((state) => ({
+      globalFilterByTopic: { ...state.globalFilterByTopic, [topic]: filter },
     })),
 }))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -78,8 +79,10 @@ func (m *Manager) StartObserver(b profile.Broker, password, topic string, opts O
 	}
 
 	sessionID := uuid.NewString()
+	decodeKey := buildKeyDecode(opts.Registry, topic)
 	obs, err := newObserver(m.ctx, sessionID, b, password, consumeOpts,
 		buildDecode(opts.Registry),
+		decodeKey,
 		func(msg KafkaMessage) { m.emit("stream:"+sessionID, msg) },
 	)
 	if err != nil {
@@ -102,8 +105,10 @@ func (m *Manager) StartConsumer(b profile.Broker, password, topic string, opts C
 	}
 
 	sessionID := uuid.NewString()
+	decodeKey := buildKeyDecode(opts.Registry, topic)
 	cons, err := newConsumer(m.ctx, sessionID, b, password, topic, opts.GroupID, resetOffset,
 		buildDecode(opts.Registry),
+		decodeKey,
 		func(msg KafkaMessage) { m.emit("stream:"+sessionID, msg) },
 	)
 	if err != nil {
@@ -136,6 +141,41 @@ func buildDecode(reg *schema.Registry) func([]byte) string {
 	}
 }
 
+// buildKeyDecode returns a key-decode function backed by Schema Registry.
+// Returns (displayKey, decodedKey) where:
+// - displayKey: What to show in UI (decoded if available, otherwise hex/utf8)
+// - decodedKey: Decoded Avro JSON, or hex for binary, or empty
+func buildKeyDecode(reg *schema.Registry, topic string) func([]byte) (string, string) {
+	if reg == nil {
+		return func(raw []byte) (string, string) {
+			s := safeString(raw)
+			return s, ""
+		}
+	}
+	
+	return func(raw []byte) (string, string) {
+		if len(raw) == 0 {
+			return "", ""
+		}
+
+		// Try Avro decoding
+		decoded, ok, err := schema.TryDecodeAvroKey(reg, topic, raw)
+		if ok && err == nil {
+			return decoded, decoded
+		}
+
+		// Fall back to hex for binary data
+		if !utf8.Valid(raw) {
+			hexStr := toHex(raw)
+			return hexStr, hexStr
+		}
+
+		// UTF-8 string
+		s := string(raw)
+		return s, ""
+	}
+}
+
 // CommitSession commits all marked-but-not-yet-committed offsets for a consumer session.
 // Returns an error if the session is not found or is not a consumer session.
 func (m *Manager) CommitSession(ctx context.Context, sessionID string) error {
@@ -159,6 +199,65 @@ func (m *Manager) Stop(sessionID string) {
 	if s, ok := m.sessions[sessionID]; ok {
 		s.Stop()
 		delete(m.sessions, sessionID)
+	}
+}
+
+// Pause pauses a session without removing it.
+func (m *Manager) Pause(sessionID string) {
+	m.mu.RLock()
+	s, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	
+	if !ok {
+		return
+	}
+	
+	// Type assert to concrete types that have Pause method
+	switch sess := s.(type) {
+	case *ObserverSession:
+		sess.Pause()
+	case *ConsumerSession:
+		sess.Pause()
+	}
+}
+
+// Resume resumes a paused session.
+func (m *Manager) Resume(sessionID string) {
+	m.mu.RLock()
+	s, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	
+	if !ok {
+		return
+	}
+	
+	// Type assert to concrete types that have Resume method
+	switch sess := s.(type) {
+	case *ObserverSession:
+		sess.Resume()
+	case *ConsumerSession:
+		sess.Resume()
+	}
+}
+
+// IsPaused returns true if the session is paused.
+func (m *Manager) IsPaused(sessionID string) bool {
+	m.mu.RLock()
+	s, ok := m.sessions[sessionID]
+	m.mu.RUnlock()
+	
+	if !ok {
+		return false
+	}
+	
+	// Type assert to concrete types that have IsPaused method
+	switch sess := s.(type) {
+	case *ObserverSession:
+		return sess.IsPaused()
+	case *ConsumerSession:
+		return sess.IsPaused()
+	default:
+		return false
 	}
 }
 

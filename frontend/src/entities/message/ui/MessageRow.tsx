@@ -7,15 +7,17 @@ interface Props {
   message: KafkaMessage
   style?: React.CSSProperties
   decodedValue?: string | null
+  decodedKey?: string | null
   onClick?: () => void
 }
 
 const VALUE_MAX = 100
 const GRID_COLS = '104px 148px 168px 1fr'
 
-export const MessageRow = memo(function MessageRow({ message, style, decodedValue, onClick }: Props) {
+export const MessageRow = memo(function MessageRow({ message, style, decodedValue, decodedKey, onClick }: Props) {
   const raw = decodedValue ?? message.value
   const value = raw.length > VALUE_MAX ? raw.slice(0, VALUE_MAX) + '…' : raw
+  const keyDisplay = decodedKey ?? message.key
 
   return (
     <div
@@ -33,8 +35,8 @@ export const MessageRow = memo(function MessageRow({ message, style, decodedValu
         {formatRelativeTime(message.timestamp)}
       </span>
       <span className="font-mono truncate pr-2">
-        {message.key
-          ? <span className="bg-muted/50 rounded px-1 text-foreground/70">{message.key}</span>
+        {keyDisplay
+          ? <span className="bg-muted/50 rounded px-1 text-foreground/70">{keyDisplay}</span>
           : <span className="text-muted-foreground/40">—</span>}
       </span>
       <span className="font-mono text-foreground/85 truncate">

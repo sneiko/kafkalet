@@ -3,13 +3,11 @@ package broker
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -17,6 +15,7 @@ import (
 	"github.com/twmb/franz-go/pkg/sasl/plain"
 	"github.com/twmb/franz-go/pkg/sasl/scram"
 	"kafkalet/internal/profile"
+	"kafkalet/internal/tlsutil"
 )
 
 // NewClient creates a franz-go client from broker config + plaintext password.
@@ -123,14 +122,21 @@ func buildTLS(cfg profile.TLSConfig) (*tls.Config, error) {
 		InsecureSkipVerify: cfg.InsecureSkipVerify, //nolint:gosec // user-controlled dev option
 	}
 
-	if cfg.CACertPath != "" {
-		pem, err := os.ReadFile(cfg.CACertPath)
+	// Truststore takes precedence over CA cert
+	if cfg.TruststorePath != "" {
+		pemPath, err := tlsutil.ConvertTruststoreToPEM(cfg.TruststorePath, cfg.TruststorePassword)
 		if err != nil {
-			return nil, fmt.Errorf("read CA cert: %w", err)
+			return nil, fmt.Errorf("convert truststore: %w", err)
 		}
-		pool := x509.NewCertPool()
-		if !pool.AppendCertsFromPEM(pem) {
-			return nil, fmt.Errorf("invalid CA cert PEM in %s", cfg.CACertPath)
+		pool, err := tlsutil.LoadTruststorePEM(pemPath)
+		if err != nil {
+			return nil, err
+		}
+		tlsCfg.RootCAs = pool
+	} else if cfg.CACertPath != "" {
+		pool, err := tlsutil.LoadTruststorePEM(cfg.CACertPath)
+		if err != nil {
+			return nil, err
 		}
 		tlsCfg.RootCAs = pool
 	}

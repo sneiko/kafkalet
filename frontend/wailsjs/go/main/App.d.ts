@@ -52,11 +52,15 @@ export function GetConsumerGroupDetail(arg1:string,arg2:string,arg3:string):Prom
 
 export function GetTopicConfig(arg1:string,arg2:string,arg3:string):Promise<Array<broker.TopicConfigEntry>>;
 
+export function GetTopicMessageCount(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<broker.TopicMessageCount>;
+
 export function GetTopicMetadata(arg1:string,arg2:string,arg3:string):Promise<broker.TopicMetadata>;
 
 export function ImportSettings():Promise<void>;
 
 export function InvalidateTopicsCache(arg1:string):Promise<void>;
+
+export function IsSessionPaused(arg1:string):Promise<boolean>;
 
 export function ListAllConsumerGroups(arg1:string,arg2:string):Promise<Array<broker.GroupSummary>>;
 
@@ -70,6 +74,8 @@ export function ListTopics(arg1:string,arg2:string):Promise<Array<broker.Topic>>
 
 export function OpenURL(arg1:string):Promise<void>;
 
+export function PauseSession(arg1:string):Promise<void>;
+
 export function PinTopic(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ProduceMessage(arg1:string,arg2:string,arg3:broker.ProduceRequest):Promise<void>;
@@ -78,17 +84,25 @@ export function RenameProfile(arg1:string,arg2:string):Promise<void>;
 
 export function ResetConsumerGroup(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<void>;
 
+export function ResumeSession(arg1:string):Promise<void>;
+
 export function SavePlugin(arg1:plugin.Plugin):Promise<plugin.Plugin>;
 
 export function SaveTopicGroup(arg1:string,arg2:string,arg3:profile.TopicGroup):Promise<void>;
 
 export function SelectCertificateFile():Promise<string>;
 
+export function SelectTruststoreFile():Promise<string>;
+
 export function SetBrokerPassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function SetNamedCredentialPassword(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function SetSchemaRegistryPassword(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function SetSchemaRegistryTruststorePassword(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function SetTruststorePassword(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function StartConsumer(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
 

@@ -36,6 +36,7 @@ import { ObserveDialog } from '@features/topic-observe'
 import { ConsumeDialog } from '@features/topic-consume'
 import { ProduceDialog } from '@features/message-produce'
 import { TopicInfoDialog } from '@features/topic-info'
+import { CountMessagesDialog } from '@features/topic-message-count'
 import { CreateTopicDialog } from '@features/topic-create'
 import { SearchDialog } from '@features/topic-search'
 import { ListTopics, DeleteTopic, SaveTopicGroup, DeleteTopicGroup, ListProfiles, InvalidateTopicsCache, PinTopic, UnpinTopic } from '@shared/api'
@@ -65,6 +66,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const [consumeTarget, setConsumeTarget] = useState<TopicTarget | null>(null)
   const [produceTarget, setProduceTarget] = useState<TopicTarget | null>(null)
   const [infoTarget, setInfoTarget] = useState<TopicTarget | null>(null)
+  const [countMessagesTarget, setCountMessagesTarget] = useState<TopicTarget | null>(null)
   const [searchTarget, setSearchTarget] = useState<TopicTarget | null>(null)
   const [deleteTopicTarget, setDeleteTopicTarget] = useState<TopicTarget | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -81,7 +83,6 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
   const pinnedTopics = broker?.pinnedTopics ?? []
 
   const load = useCallback(async (force?: boolean) => {
-    setLoading(true)
     try {
       if (force) await InvalidateTopicsCache(brokerId)
       const result = await ListTopics(profileId, brokerId)
@@ -94,6 +95,13 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
     }
   }, [profileId, brokerId])
 
+  // Clear topics and start loading when broker changes
+  useEffect(() => {
+    setTopics([])
+    setLoading(true)
+  }, [brokerId])
+
+  // Load topics after clearing
   useEffect(() => {
     load()
   }, [load])
@@ -275,6 +283,7 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
             onProduce={() => setProduceTarget(makeTarget(topic))}
             onSearch={() => setSearchTarget(makeTarget(topic))}
             onInfo={() => setInfoTarget(makeTarget(topic))}
+            onCountMessages={() => setCountMessagesTarget(makeTarget(topic))}
             onDelete={() => setDeleteTopicTarget(makeTarget(topic))}
             onTogglePin={() => handleTogglePin(topic)}
           />
@@ -514,6 +523,14 @@ export function TopicsTab({ profileId, brokerId, brokerName }: Props) {
           {...infoTarget}
           open={Boolean(infoTarget)}
           onOpenChange={(v) => !v && setInfoTarget(null)}
+        />
+      )}
+
+      {countMessagesTarget && (
+        <CountMessagesDialog
+          {...countMessagesTarget}
+          open={Boolean(countMessagesTarget)}
+          onOpenChange={(v) => !v && setCountMessagesTarget(null)}
         />
       )}
 

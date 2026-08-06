@@ -1,23 +1,22 @@
 import type { KafkaMessage } from '@entities/message'
+import { SaveTextFile } from '@shared/api'
 
-/** Triggers a browser download for the given content. */
-function download(filename: string, content: string, mimeType: string) {
-  const blob = new Blob([content], { type: mimeType })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  a.click()
-  URL.revokeObjectURL(url)
+/**
+ * Writes content to a file chosen via the native OS save dialog.
+ * Blob/anchor downloads do not work inside the WebKit webview, so exporting
+ * must go through the bound Go method instead.
+ */
+function save(filename: string, content: string) {
+  return SaveTextFile(filename, content)
 }
 
 export function exportAsJson(messages: KafkaMessage[], topic: string) {
   const data = JSON.stringify(messages, null, 2)
-  download(`${topic}-${Date.now()}.json`, data, 'application/json')
+  return save(`${topic}-${Date.now()}.json`, data)
 }
 
 export function exportAsCsv(messages: KafkaMessage[], topic: string) {
-  const escape = (s: string) => `"${s.replace(/"/g, '""')}"`
+  const escape = (s: string) => `"${String(s ?? '').replace(/"/g, '""')}"`
   const header = 'partition,offset,timestamp,key,value,headers'
   const rows = messages.map((m) =>
     [
@@ -29,5 +28,5 @@ export function exportAsCsv(messages: KafkaMessage[], topic: string) {
       escape(JSON.stringify(m.headers)),
     ].join(','),
   )
-  download(`${topic}-${Date.now()}.csv`, [header, ...rows].join('\n'), 'text/csv')
+  return save(`${topic}-${Date.now()}.csv`, [header, ...rows].join('\n'))
 }

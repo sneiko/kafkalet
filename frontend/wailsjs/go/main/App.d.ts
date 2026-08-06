@@ -88,6 +88,8 @@ export function ResumeSession(arg1:string):Promise<void>;
 
 export function SavePlugin(arg1:plugin.Plugin):Promise<plugin.Plugin>;
 
+export function SaveTextFile(arg1:string,arg2:string):Promise<void>;
+
 export function SaveTopicGroup(arg1:string,arg2:string,arg3:profile.TopicGroup):Promise<void>;
 
 export function SelectCertificateFile():Promise<string>;
